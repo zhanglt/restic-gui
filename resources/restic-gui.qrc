@@ -1,0 +1,24 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- SQL脚本 -->
+        <file>sql/init_database.sql</file>
+
+        <!-- 图标资源 -->
+        <!-- 待添加图标文件 -->
+        <!--
+        <file>icons/app_icon.png</file>
+        <file>icons/repository.png</file>
+        <file>icons/backup.png</file>
+        <file>icons/snapshot.png</file>
+        <file>icons/restore.png</file>
+        <file>icons/settings.png</file>
+        -->
+
+        <!-- 翻译文件 -->
+        <!-- 待添加翻译文件 -->
+        <!--
+        <file>translations/restic-gui_zh_CN.qm</file>
+        <file>translations/restic-gui_en_US.qm</file>
+        -->
+    </qresource>
+</RCC>

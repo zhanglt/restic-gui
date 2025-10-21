@@ -1,0 +1,13 @@
+.claude
+CLAUDE.md
+release
+debug
+restic_doc
+build
+bin
+
+Makefile.Debug
+Makefile.Release
+nul
+
+

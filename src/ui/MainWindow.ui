@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1200</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Restic GUI - 备份管理工具</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QListWidget" name="navigationList">
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>150</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QListWidget {
+    background-color: #2c3e50;
+    color: white;
+    border: none;
+    font-size: 14px;
+}
+QListWidget::item {
+    padding: 12px;
+    border-bottom: 1px solid #34495e;
+}
+QListWidget::item:selected {
+    background-color: #3498db;
+}
+QListWidget::item:hover {
+    background-color: #34495e;
+}</string>
+      </property>
+      <item>
+       <property name="text">
+        <string>首页</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>仓库管理</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>备份任务</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>快照浏览</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>数据恢复</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>统计信息</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item>
+     <widget class="QStackedWidget" name="pageStack">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1200</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>文件(&amp;F)</string>
+    </property>
+    <addaction name="actionNewRepository"/>
+    <addaction name="actionOpenRepository"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>编辑(&amp;E)</string>
+    </property>
+    <addaction name="actionSettings"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>工具(&amp;T)</string>
+    </property>
+    <addaction name="actionCheckRepository"/>
+    <addaction name="actionUnlockRepository"/>
+    <addaction name="actionPruneRepository"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>帮助(&amp;H)</string>
+    </property>
+    <addaction name="actionDocumentation"/>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <property name="windowTitle">
+    <string>工具栏</string>
+   </property>
+   <property name="movable">
+    <bool>false</bool>
+   </property>
+   <property name="floatable">
+    <bool>false</bool>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionBackupNow"/>
+   <addaction name="actionRefresh"/>
+   <addaction name="separator"/>
+   <addaction name="actionStop"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionNewRepository">
+   <property name="text">
+    <string>新建仓库(&amp;N)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionOpenRepository">
+   <property name="text">
+    <string>打开仓库(&amp;O)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>退出(&amp;X)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>设置(&amp;S)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+,</string>
+   </property>
+  </action>
+  <action name="actionCheckRepository">
+   <property name="text">
+    <string>检查仓库(&amp;C)</string>
+   </property>
+  </action>
+  <action name="actionUnlockRepository">
+   <property name="text">
+    <string>解锁仓库(&amp;U)</string>
+   </property>
+  </action>
+  <action name="actionPruneRepository">
+   <property name="text">
+    <string>维护仓库(&amp;M)</string>
+   </property>
+  </action>
+  <action name="actionDocumentation">
+   <property name="text">
+    <string>文档(&amp;D)</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>关于(&amp;A)</string>
+   </property>
+  </action>
+  <action name="actionBackupNow">
+   <property name="text">
+    <string>立即备份</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>刷新</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
+  </action>
+  <action name="actionStop">
+   <property name="text">
+    <string>停止</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
