@@ -28,6 +28,9 @@ RepositoryPage::RepositoryPage(QWidget* parent)
     connect(ui->editButton, &QPushButton::clicked, this, &RepositoryPage::onEditRepository);
     connect(ui->deleteButton, &QPushButton::clicked, this, &RepositoryPage::onDeleteRepository);
     connect(ui->refreshButton, &QPushButton::clicked, this, &RepositoryPage::onRefresh);
+    connect(ui->checkButton, &QPushButton::clicked, this, &RepositoryPage::onCheckRepository);
+    connect(ui->unlockButton, &QPushButton::clicked, this, &RepositoryPage::onUnlockRepository);
+    connect(ui->pruneButton, &QPushButton::clicked, this, &RepositoryPage::onPruneRepository);
 
     // 创建进度更新定时器
     m_progressTimer = new QTimer(this);
@@ -356,6 +359,103 @@ void RepositoryPage::onDeleteRepository()
 void RepositoryPage::onRefresh()
 {
     loadRepositories();
+}
+
+void RepositoryPage::onCheckRepository()
+{
+    // 获取选中的行
+    int currentRow = ui->tableWidget->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, tr("警告"), tr("请先选择一个仓库"));
+        return;
+    }
+
+    // 获取仓库ID和名称
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    int repoId = nameItem->data(Qt::UserRole).toInt();
+    QString repoName = nameItem->text();
+
+    // 获取仓库信息
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(repoId);
+
+    if (repo.id <= 0) {
+        QMessageBox::critical(this, tr("错误"), tr("无法获取仓库信息"));
+        return;
+    }
+
+    QMessageBox::information(this, tr("检查仓库"),
+        tr("正在检查仓库 \"%1\"...\n此功能即将实现。").arg(repo.name));
+}
+
+void RepositoryPage::onUnlockRepository()
+{
+    // 获取选中的行
+    int currentRow = ui->tableWidget->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, tr("警告"), tr("请先选择一个仓库"));
+        return;
+    }
+
+    // 获取仓库ID和名称
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    int repoId = nameItem->data(Qt::UserRole).toInt();
+    QString repoName = nameItem->text();
+
+    // 获取仓库信息
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(repoId);
+
+    if (repo.id <= 0) {
+        QMessageBox::critical(this, tr("错误"), tr("无法获取仓库信息"));
+        return;
+    }
+
+    // 确认解锁
+    int ret = QMessageBox::question(this, tr("确认解锁"),
+        tr("确定要解锁仓库 \"%1\" 吗？\n这将删除该仓库的锁文件。").arg(repo.name),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+
+    if (ret == QMessageBox::Yes) {
+        QMessageBox::information(this, tr("解锁仓库"),
+            tr("仓库解锁功能即将实现。"));
+    }
+}
+
+void RepositoryPage::onPruneRepository()
+{
+    // 获取选中的行
+    int currentRow = ui->tableWidget->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, tr("警告"), tr("请先选择一个仓库"));
+        return;
+    }
+
+    // 获取仓库ID和名称
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    int repoId = nameItem->data(Qt::UserRole).toInt();
+    QString repoName = nameItem->text();
+
+    // 获取仓库信息
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(repoId);
+
+    if (repo.id <= 0) {
+        QMessageBox::critical(this, tr("错误"), tr("无法获取仓库信息"));
+        return;
+    }
+
+    // 确认维护
+    int ret = QMessageBox::question(this, tr("确认维护"),
+        tr("确定要维护仓库 \"%1\" 吗？\n这将执行 prune 操作，删除不再需要的数据。").arg(repo.name),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+
+    if (ret == QMessageBox::Yes) {
+        QMessageBox::information(this, tr("维护仓库"),
+            tr("仓库维护功能即将实现。"));
+    }
 }
 
 } // namespace UI

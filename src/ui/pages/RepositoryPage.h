@@ -31,6 +31,9 @@ private slots:
     void onEditRepository();
     void onDeleteRepository();
     void onRefresh();
+    void onCheckRepository();
+    void onUnlockRepository();
+    void onPruneRepository();
     void onCreateRepositoryFinished();
     void onUpdateProgress();
     void onProgressCancelled();
