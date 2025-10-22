@@ -502,10 +502,41 @@ void MainWindow::onShowMainWindow()
 
 void MainWindow::onExitApplication()
 {
-    // 直接退出，不询问
-    saveSettings();
-    Utils::Logger::instance()->log(Utils::Logger::Info, "从系统托盘退出应用程序");
-    qApp->quit();
+    // 使用 this 作为父窗口，配合 setQuitOnLastWindowClosed(false) 确保对话框关闭不会退出程序
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(tr("确认退出"));
+    msgBox.setText(tr("确定要退出应用程序吗？"));
+    msgBox.setIcon(QMessageBox::Question);
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::No);
+
+    // 设置窗口标志，确保对话框能正常显示（即使主窗口隐藏）
+    msgBox.setWindowFlags(msgBox.windowFlags() | Qt::WindowStaysOnTopHint);
+
+    int ret = msgBox.exec();
+
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("用户选择: %1").arg(ret == QMessageBox::Yes ? "Yes" : "No"));
+
+    if (ret == QMessageBox::Yes) {
+        saveSettings();
+        Utils::Logger::instance()->log(Utils::Logger::Info, "从系统托盘退出应用程序");
+
+        // 先隐藏托盘图标再退出
+        if (m_trayIcon) {
+            m_trayIcon->hide();
+        }
+
+        qApp->quit();
+    } else {
+        Utils::Logger::instance()->log(Utils::Logger::Debug, "用户取消退出");
+
+        // 确保托盘图标可见
+        if (m_trayIcon && !m_trayIcon->isVisible()) {
+            m_trayIcon->show();
+            Utils::Logger::instance()->log(Utils::Logger::Warning, "托盘图标被意外隐藏，已重新显示");
+        }
+    }
 }
 
 } // namespace UI

@@ -27,6 +27,9 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName("Restic GUI");
     QCoreApplication::setApplicationVersion("1.0.0");
 
+    // 禁用"最后一个窗口关闭时退出"，因为我们使用系统托盘
+    app.setQuitOnLastWindowClosed(false);
+
     // 初始化日志系统
     QString logPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/logs";
     QDir().mkpath(logPath);
