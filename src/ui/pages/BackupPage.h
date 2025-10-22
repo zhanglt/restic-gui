@@ -25,6 +25,7 @@ private slots:
     void onCreateTask();
     void onEditTask();
     void onDeleteTask();
+    void onToggleTask();
     void onRunTask();
     void onRefresh();
     void onPasswordError(int taskId, int repoId);

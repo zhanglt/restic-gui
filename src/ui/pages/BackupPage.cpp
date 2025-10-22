@@ -23,6 +23,7 @@ BackupPage::BackupPage(QWidget* parent)
     connect(ui->createButton, &QPushButton::clicked, this, &BackupPage::onCreateTask);
     connect(ui->editButton, &QPushButton::clicked, this, &BackupPage::onEditTask);
     connect(ui->deleteButton, &QPushButton::clicked, this, &BackupPage::onDeleteTask);
+    connect(ui->toggleButton, &QPushButton::clicked, this, &BackupPage::onToggleTask);
     connect(ui->runButton, &QPushButton::clicked, this, &BackupPage::onRunTask);
     connect(ui->refreshButton, &QPushButton::clicked, this, &BackupPage::onRefresh);
 
@@ -246,6 +247,61 @@ void BackupPage::onEditTask()
             QMessageBox::critical(this, tr("错误"), tr("更新任务失败"));
         }
     }
+}
+
+void BackupPage::onToggleTask()
+{
+    // 获取选中的行
+    int currentRow = ui->tableWidget->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, tr("警告"), tr("请先选择一个任务"));
+        return;
+    }
+
+    // 获取任务ID
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    int taskId = nameItem->data(Qt::UserRole).toInt();
+
+    // 获取任务信息
+    Data::DatabaseManager* db = Data::DatabaseManager::instance();
+    Models::BackupTask task = db->getBackupTask(taskId);
+
+    if (task.id <= 0) {
+        QMessageBox::critical(this, tr("错误"), tr("无法获取任务信息"));
+        return;
+    }
+
+    // 切换启用状态
+    task.enabled = !task.enabled;
+
+    // 更新数据库
+    if (!db->updateBackupTask(task)) {
+        QMessageBox::critical(this, tr("错误"), tr("更新任务失败"));
+        return;
+    }
+
+    // 更新调度器
+    if (task.enabled &&
+        task.schedule.type != Models::Schedule::None &&
+        task.schedule.type != Models::Schedule::Manual) {
+        // 任务被启用且有调度计划，添加到调度器
+        Core::SchedulerManager::instance()->updateTaskNextRun(taskId);
+        Utils::Logger::instance()->log(Utils::Logger::Info,
+            QString("任务 \"%1\" 已启用").arg(task.name));
+    } else {
+        // 任务被禁用或是手动任务，从调度器中移除
+        Core::SchedulerManager::instance()->removeTask(taskId);
+        Utils::Logger::instance()->log(Utils::Logger::Info,
+            QString("任务 \"%1\" 已禁用").arg(task.name));
+    }
+
+    // 提示用户
+    QString status = task.enabled ? tr("启用") : tr("禁用");
+    QMessageBox::information(this, tr("成功"),
+        tr("任务 \"%1\" 已%2").arg(task.name).arg(status));
+
+    // 刷新任务列表
+    loadTasks();
 }
 
 void BackupPage::onDeleteTask()

@@ -62,6 +62,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="toggleButton">
+       <property name="text">
+        <string>启用/禁用</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="runButton">
        <property name="text">
         <string>立即执行</string>
