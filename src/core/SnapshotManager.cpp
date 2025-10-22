@@ -100,11 +100,17 @@ bool SnapshotManager::deleteSnapshots(int repoId, const QStringList& snapshotIds
 
 QList<Models::FileInfo> SnapshotManager::listFiles(int repoId, const QString& snapshotId, const QString& path)
 {
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("SnapshotManager::listFiles: repoId=%1, snapshotId=%2, path=%3")
+            .arg(repoId).arg(snapshotId.left(8)).arg(path.isEmpty() ? "<root>" : path));
+
     QList<Models::FileInfo> files;
 
     // 检查缓存
     Data::CacheManager* cache = Data::CacheManager::instance();
     if (cache->getCachedFileTree(snapshotId, path, files)) {
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("SnapshotManager::listFiles: 从缓存返回 %1 个文件").arg(files.size()));
         return files;
     }
 
@@ -113,12 +119,24 @@ QList<Models::FileInfo> SnapshotManager::listFiles(int repoId, const QString& sn
     QString password;
 
     if (Data::PasswordManager::instance()->getPassword(repoId, password)) {
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            "SnapshotManager::listFiles: 获取密码成功，准备调用ResticWrapper");
         ResticWrapper wrapper;
         if (wrapper.listFiles(repo, password, snapshotId, path, files)) {
+            Utils::Logger::instance()->log(Utils::Logger::Debug,
+                QString("SnapshotManager::listFiles: ResticWrapper返回 %1 个文件").arg(files.size()));
             cache->cacheFileTree(snapshotId, path, files);
+        } else {
+            Utils::Logger::instance()->log(Utils::Logger::Warning,
+                "SnapshotManager::listFiles: ResticWrapper.listFiles失败");
         }
+    } else {
+        Utils::Logger::instance()->log(Utils::Logger::Warning,
+            QString("SnapshotManager::listFiles: 无法获取仓库 %1 的密码").arg(repoId));
     }
 
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("SnapshotManager::listFiles: 最终返回 %1 个文件").arg(files.size()));
     return files;
 }
 

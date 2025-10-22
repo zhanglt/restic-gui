@@ -185,6 +185,11 @@ private:
      */
     void checkCacheSizeLimit();
 
+    /**
+     * @brief 获取缓存大小（不加锁版本，调用前需已持有锁）
+     */
+    qint64 getCacheSizeUnlocked() const;
+
 private:
     static CacheManager* s_instance;
     static QMutex s_instanceMutex;

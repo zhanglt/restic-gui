@@ -4,6 +4,7 @@
 #include "../../core/SnapshotManager.h"
 #include "../../data/PasswordManager.h"
 #include "../../utils/Logger.h"
+#include "../dialogs/SnapshotBrowserDialog.h"
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QtConcurrent>
@@ -233,9 +234,39 @@ void SnapshotPage::onBrowseSnapshot()
         return;
     }
 
-    // TODO: 打开文件浏览对话框
-    QMessageBox::information(this, tr("提示"),
-        tr("快照文件浏览功能待实现。"));
+    // 获取快照信息
+    QTableWidgetItem* idItem = ui->tableWidget->item(currentRow, 0);
+    QString snapshotId = idItem->data(Qt::UserRole).toString();
+
+    QTableWidgetItem* timeItem = ui->tableWidget->item(currentRow, 1);
+    QString snapshotName = timeItem->text();
+
+    // 检查是否有仓库密码
+    Data::PasswordManager* passMgr = Data::PasswordManager::instance();
+    if (!passMgr->hasPassword(m_currentRepositoryId)) {
+        // 获取仓库名称
+        Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+        Models::Repository repo = repoMgr->getRepository(m_currentRepositoryId);
+
+        bool ok;
+        QString password = QInputDialog::getText(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
+            QLineEdit::Password, QString(), &ok);
+
+        if (!ok || password.isEmpty()) {
+            return;
+        }
+
+        // 保存密码到密码管理器
+        passMgr->setPassword(m_currentRepositoryId, password);
+    }
+
+    // 打开文件浏览对话框
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("打开快照浏览器: %1").arg(snapshotId));
+
+    SnapshotBrowserDialog dialog(m_currentRepositoryId, snapshotId, snapshotName, this);
+    dialog.exec();
 }
 
 void SnapshotPage::onRestoreSnapshot()

@@ -264,6 +264,12 @@ void CacheManager::clearRepositoryCache(int repoId)
 qint64 CacheManager::getCacheSize() const
 {
     QMutexLocker locker(&m_mutex);
+    return getCacheSizeUnlocked();
+}
+
+qint64 CacheManager::getCacheSizeUnlocked() const
+{
+    // 注意：调用此函数前应已锁定mutex
 
     // 简化估算：每个快照约1KB，每个文件信息约512字节
     qint64 size = 0;
@@ -326,7 +332,7 @@ void CacheManager::checkCacheSizeLimit()
 {
     // 注意：调用此函数前应已锁定mutex
 
-    qint64 currentSize = getCacheSize();
+    qint64 currentSize = getCacheSizeUnlocked();
     qint64 maxSize = static_cast<qint64>(m_maxCacheSizeMB) * 1024 * 1024;
 
     if (currentSize > maxSize) {
@@ -334,7 +340,7 @@ void CacheManager::checkCacheSizeLimit()
         cleanupExpiredCache();
 
         // 如果还是超过限制，清理最老的文件树缓存
-        currentSize = getCacheSize();
+        currentSize = getCacheSizeUnlocked();
         if (currentSize > maxSize) {
             // 按时间戳排序，移除最老的缓存
             QList<QString> keys = m_fileTreeCache.keys();
@@ -356,7 +362,7 @@ void CacheManager::checkCacheSizeLimit()
                 m_fileTreeCache.remove(pair.first);
                 removed++;
 
-                if (getCacheSize() <= maxSize) {
+                if (getCacheSizeUnlocked() <= maxSize) {
                     break;
                 }
             }

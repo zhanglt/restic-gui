@@ -89,7 +89,8 @@ SOURCES += \
 SOURCES += \
     src/ui/dialogs/ProgressDialog.cpp \
     src/ui/dialogs/SettingsDialog.cpp \
-    src/ui/dialogs/CreateTaskDialog.cpp
+    src/ui/dialogs/CreateTaskDialog.cpp \
+    src/ui/dialogs/SnapshotBrowserDialog.cpp
 
 # UI - 自定义控件
 SOURCES += \
@@ -132,6 +133,7 @@ HEADERS += \
     src/ui/dialogs/ProgressDialog.h \
     src/ui/dialogs/SettingsDialog.h \
     src/ui/dialogs/CreateTaskDialog.h \
+    src/ui/dialogs/SnapshotBrowserDialog.h \
     src/ui/widgets/SnapshotListWidget.h \
     src/ui/widgets/FileTreeWidget.h
 

@@ -581,11 +581,16 @@ QList<Models::FileInfo> ResticWrapper::parseFilesJson(const QString& json)
     // restic ls输出是每行一个JSON对象
     QStringList lines = json.split('\n', Qt::SkipEmptyParts);
 
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("parseFilesJson: 共 %1 行JSON数据").arg(lines.size()));
+
     for (const QString& line : lines) {
         QJsonParseError error;
         QJsonDocument doc = QJsonDocument::fromJson(line.toUtf8(), &error);
 
         if (error.error != QJsonParseError::NoError || !doc.isObject()) {
+            Utils::Logger::instance()->log(Utils::Logger::Debug,
+                QString("JSON解析失败: %1").arg(error.errorString()));
             continue;
         }
 
@@ -594,17 +599,34 @@ QList<Models::FileInfo> ResticWrapper::parseFilesJson(const QString& json)
 
         file.name = obj["name"].toString();
         file.path = obj["path"].toString();
-        file.type = obj["type"].toString() == "dir" ? Models::FileType::Directory : Models::FileType::File;
+
+        // 解析类型
+        QString typeStr = obj["type"].toString();
+        if (typeStr == "dir") {
+            file.type = Models::FileType::Directory;
+        } else if (typeStr == "symlink") {
+            file.type = Models::FileType::Symlink;
+        } else {
+            file.type = Models::FileType::File;
+        }
+
         file.size = obj["size"].toVariant().toLongLong();
-        file.mode = obj["mode"].toInt();
+        file.mode = QString::number(obj["mode"].toInt(), 8); // 转换为八进制字符串
         file.mtime = QDateTime::fromString(obj["mtime"].toString(), Qt::ISODate);
         file.uid = obj["uid"].toInt();
         file.gid = obj["gid"].toInt();
         file.user = obj["user"].toString();
         file.group = obj["group"].toString();
 
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("解析文件: name=%1, type=%2, path=%3")
+                .arg(file.name).arg(typeStr).arg(file.path));
+
         files.append(file);
     }
+
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("parseFilesJson: 成功解析 %1 个文件").arg(files.size()));
 
     return files;
 }
