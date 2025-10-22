@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QSystemTrayIcon>
 
 namespace Ui {
 class MainWindow;
@@ -32,6 +33,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
 private slots:
     void onNavigationChanged(int index);
@@ -56,11 +58,17 @@ private slots:
     void onRefresh();
     void onStop();
 
+    // 系统托盘
+    void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
+    void onShowMainWindow();
+    void onExitApplication();
+
 private:
     void createPages();
     void setupConnections();
     void loadSettings();
     void saveSettings();
+    void createSystemTray();
 
     Ui::MainWindow* ui;
 
@@ -71,6 +79,10 @@ private:
     SnapshotPage* m_snapshotPage;
     RestorePage* m_restorePage;
     StatsPage* m_statsPage;
+
+    // 系统托盘
+    QSystemTrayIcon* m_trayIcon;
+    QMenu* m_trayMenu;
 
     // 当前选中的仓库ID
     int m_currentRepositoryId;

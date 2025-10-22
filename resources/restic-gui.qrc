@@ -4,9 +4,9 @@
         <file>sql/init_database.sql</file>
 
         <!-- 图标资源 -->
-        <!-- 待添加图标文件 -->
+        <file>icons/app.ico</file>
+        <!-- 待添加其他图标文件 -->
         <!--
-        <file>icons/app_icon.png</file>
         <file>icons/repository.png</file>
         <file>icons/backup.png</file>
         <file>icons/snapshot.png</file>

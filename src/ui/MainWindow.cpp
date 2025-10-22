@@ -20,6 +20,9 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QMenu>
+#include <QAction>
+#include <QIcon>
 
 namespace ResticGUI {
 namespace UI {
@@ -33,12 +36,18 @@ MainWindow::MainWindow(QWidget* parent)
     , m_snapshotPage(nullptr)
     , m_restorePage(nullptr)
     , m_statsPage(nullptr)
+    , m_trayIcon(nullptr)
+    , m_trayMenu(nullptr)
     , m_currentRepositoryId(-1)
 {
     ui->setupUi(this);
 
+    // 设置窗口图标
+    setWindowIcon(QIcon(":/icons/app.ico"));
+
     createPages();
     setupConnections();
+    createSystemTray();
     loadSettings();
 
     // 默认显示首页
@@ -209,6 +218,34 @@ void MainWindow::closeEvent(QCloseEvent* event)
         Utils::Logger::instance()->log(Utils::Logger::Info, "应用程序退出");
     } else {
         event->ignore();
+    }
+}
+
+void MainWindow::changeEvent(QEvent* event)
+{
+    QMainWindow::changeEvent(event);
+
+    // 处理窗口最小化事件
+    if (event->type() == QEvent::WindowStateChange) {
+        Data::ConfigManager* config = Data::ConfigManager::instance();
+
+        // 如果启用了"最小化到系统托盘"选项，并且窗口被最小化
+        if (config->getMinimizeToTray() && isMinimized()) {
+            // 隐藏窗口
+            hide();
+
+            // 显示托盘提示
+            if (m_trayIcon && m_trayIcon->isVisible()) {
+                m_trayIcon->showMessage(
+                    tr("Restic GUI"),
+                    tr("程序已最小化到系统托盘"),
+                    QSystemTrayIcon::Information,
+                    2000
+                );
+            }
+
+            event->ignore();
+        }
     }
 }
 
@@ -385,6 +422,90 @@ void MainWindow::onStop()
         QMessageBox::information(this, tr("停止操作"),
             tr("停止操作功能即将实现。"));
     }
+}
+
+// 系统托盘相关函数
+void MainWindow::createSystemTray()
+{
+    // 检查系统是否支持托盘
+    if (!QSystemTrayIcon::isSystemTrayAvailable()) {
+        Utils::Logger::instance()->log(Utils::Logger::Warning,
+            "系统不支持系统托盘功能");
+        return;
+    }
+
+    // 创建托盘图标
+    m_trayIcon = new QSystemTrayIcon(this);
+
+    // 设置托盘图标
+    QIcon icon(":/icons/app.ico");
+    if (icon.isNull()) {
+        Utils::Logger::instance()->log(Utils::Logger::Warning,
+            "无法加载托盘图标，尝试使用窗口图标");
+        icon = windowIcon();
+    }
+    m_trayIcon->setIcon(icon);
+    m_trayIcon->setToolTip(tr("Restic GUI - 备份管理工具"));
+
+    // 创建托盘菜单
+    m_trayMenu = new QMenu(this);
+
+    QAction* showAction = new QAction(tr("显示主窗口"), this);
+    connect(showAction, &QAction::triggered, this, &MainWindow::onShowMainWindow);
+
+    QAction* exitAction = new QAction(tr("退出"), this);
+    connect(exitAction, &QAction::triggered, this, &MainWindow::onExitApplication);
+
+    m_trayMenu->addAction(showAction);
+    m_trayMenu->addSeparator();
+    m_trayMenu->addAction(exitAction);
+
+    m_trayIcon->setContextMenu(m_trayMenu);
+
+    // 连接托盘图标激活信号
+    connect(m_trayIcon, &QSystemTrayIcon::activated,
+            this, &MainWindow::onTrayIconActivated);
+
+    // 显示托盘图标
+    m_trayIcon->show();
+
+    Utils::Logger::instance()->log(Utils::Logger::Info, "系统托盘已创建");
+}
+
+void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
+{
+    switch (reason) {
+        case QSystemTrayIcon::Trigger:
+        case QSystemTrayIcon::DoubleClick:
+            // 单击或双击托盘图标，显示/隐藏主窗口
+            if (isVisible()) {
+                hide();
+            } else {
+                onShowMainWindow();
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+void MainWindow::onShowMainWindow()
+{
+    // 显示主窗口
+    show();
+    // 恢复窗口状态（如果是最小化的）
+    setWindowState((windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+    // 激活窗口并置于顶层
+    raise();
+    activateWindow();
+}
+
+void MainWindow::onExitApplication()
+{
+    // 直接退出，不询问
+    saveSettings();
+    Utils::Logger::instance()->log(Utils::Logger::Info, "从系统托盘退出应用程序");
+    qApp->quit();
 }
 
 } // namespace UI
