@@ -34,6 +34,7 @@ private slots:
     void onItemDoubleClicked(QTreeWidgetItem* item, int column);
     void onSearchTextChanged(const QString& text);
     void onFilesLoaded();
+    void onSearchTimerTimeout();
 
 private:
     void setupUI();
@@ -42,6 +43,9 @@ private:
     void addFileItems(QTreeWidgetItem* parent, const QList<Models::FileInfo>& files);
     QIcon getFileIcon(const Models::FileInfo& fileInfo);
     QString formatFileSize(qint64 size);
+    bool filterTreeItem(QTreeWidgetItem* item, const QString& searchText);
+    void expandAllUnloadedDirectories(QTreeWidgetItem* item = nullptr);
+    void performSearch(const QString& searchText);
 
     int m_repoId;
     QString m_snapshotId;
@@ -55,6 +59,10 @@ private:
     bool m_isLoading;
     QFutureWatcher<QList<Models::FileInfo>>* m_fileWatcher;
     QTreeWidgetItem* m_currentLoadingItem;
+
+    QString m_pendingSearchText;
+    QTimer* m_searchTimer;
+    bool m_isSearching;
 };
 
 } // namespace UI

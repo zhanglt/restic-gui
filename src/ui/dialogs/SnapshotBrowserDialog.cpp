@@ -7,6 +7,8 @@
 #include <QApplication>
 #include <QStyle>
 #include <QSet>
+#include <QTimer>
+#include <functional>
 
 namespace ResticGUI {
 namespace UI {
@@ -24,6 +26,9 @@ SnapshotBrowserDialog::SnapshotBrowserDialog(int repoId, const QString& snapshot
     , m_isLoading(false)
     , m_fileWatcher(nullptr)
     , m_currentLoadingItem(nullptr)
+    , m_pendingSearchText()
+    , m_searchTimer(nullptr)
+    , m_isSearching(false)
 {
     setupUI();
 
@@ -81,11 +86,17 @@ void SnapshotBrowserDialog::setupUI()
     buttonLayout->addWidget(m_closeButton);
     mainLayout->addLayout(buttonLayout);
 
+    // 初始化搜索定时器
+    m_searchTimer = new QTimer(this);
+    m_searchTimer->setSingleShot(true);
+    m_searchTimer->setInterval(800); // 800ms延迟，等待加载
+
     // 连接信号
     connect(m_treeWidget, &QTreeWidget::itemExpanded, this, &SnapshotBrowserDialog::onItemExpanded);
     connect(m_treeWidget, &QTreeWidget::itemDoubleClicked, this, &SnapshotBrowserDialog::onItemDoubleClicked);
     connect(m_searchEdit, &QLineEdit::textChanged, this, &SnapshotBrowserDialog::onSearchTextChanged);
     connect(m_closeButton, &QPushButton::clicked, this, &QDialog::accept);
+    connect(m_searchTimer, &QTimer::timeout, this, &SnapshotBrowserDialog::onSearchTimerTimeout);
 
     // 初始化异步加载器
     m_fileWatcher = new QFutureWatcher<QList<Models::FileInfo>>(this);
@@ -389,21 +400,77 @@ void SnapshotBrowserDialog::onItemDoubleClicked(QTreeWidgetItem* item, int colum
 
 void SnapshotBrowserDialog::onSearchTextChanged(const QString& text)
 {
-    // 简单的搜索过滤实现
+    // 停止之前的搜索定时器
+    m_searchTimer->stop();
+    m_pendingSearchText = text;
+
     if (text.isEmpty()) {
+        // 清空搜索：显示所有项
+        m_isSearching = false;
         for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
-            m_treeWidget->topLevelItem(i)->setHidden(false);
+            QTreeWidgetItem* item = m_treeWidget->topLevelItem(i);
+            item->setHidden(false);
+            // 递归显示所有子项
+            std::function<void(QTreeWidgetItem*)> showAll = [&showAll](QTreeWidgetItem* parent) {
+                parent->setHidden(false);
+                for (int j = 0; j < parent->childCount(); ++j) {
+                    showAll(parent->child(j));
+                }
+            };
+            showAll(item);
         }
+        m_statusLabel->setText(tr("已加载 %1 个文件/目录").arg(m_treeWidget->topLevelItemCount()));
         return;
     }
 
-    // 隐藏不匹配的项
-    for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
-        QTreeWidgetItem* item = m_treeWidget->topLevelItem(i);
-        QString itemText = item->text(0);
-        bool match = itemText.contains(text, Qt::CaseInsensitive);
-        item->setHidden(!match);
+    // 标记正在搜索
+    m_isSearching = true;
+    m_statusLabel->setText(tr("正在加载目录以进行搜索..."));
+
+    // 展开所有未加载的目录
+    expandAllUnloadedDirectories();
+
+    // 启动延迟搜索定时器
+    m_searchTimer->start();
+}
+
+bool SnapshotBrowserDialog::filterTreeItem(QTreeWidgetItem* item, const QString& searchText)
+{
+    if (!item) {
+        return false;
     }
+
+    // 检查当前项是否匹配
+    QString itemText = item->text(0);
+    bool currentMatch = itemText.contains(searchText, Qt::CaseInsensitive);
+
+    // 检查子项是否有匹配
+    bool hasChildMatch = false;
+    for (int i = 0; i < item->childCount(); ++i) {
+        QTreeWidgetItem* child = item->child(i);
+        // 跳过"加载中..."占位符
+        if (child->text(0) == tr("加载中...")) {
+            child->setHidden(true);
+            continue;
+        }
+
+        bool childMatch = filterTreeItem(child, searchText);
+        child->setHidden(!childMatch);
+
+        if (childMatch) {
+            hasChildMatch = true;
+        }
+    }
+
+    // 如果当前项或任何子项匹配，则显示当前项
+    bool shouldShow = currentMatch || hasChildMatch;
+
+    // 如果有匹配的子项，展开当前项以显示子项
+    if (hasChildMatch && !currentMatch) {
+        item->setExpanded(true);
+    }
+
+    return shouldShow;
 }
 
 QIcon SnapshotBrowserDialog::getFileIcon(const Models::FileInfo& fileInfo)
@@ -438,6 +505,79 @@ QString SnapshotBrowserDialog::formatFileSize(qint64 size)
     } else {
         return QString::number(size / TB) + " TB";
     }
+}
+
+void SnapshotBrowserDialog::expandAllUnloadedDirectories(QTreeWidgetItem* item)
+{
+    QList<QTreeWidgetItem*> itemsToProcess;
+
+    if (item == nullptr) {
+        // 从所有顶级项开始
+        for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
+            itemsToProcess.append(m_treeWidget->topLevelItem(i));
+        }
+    } else {
+        itemsToProcess.append(item);
+    }
+
+    // 递归处理所有目录项
+    while (!itemsToProcess.isEmpty()) {
+        QTreeWidgetItem* current = itemsToProcess.takeFirst();
+
+        // 检查是否是未加载的目录
+        int typeInt = current->data(0, Qt::UserRole + 1).toInt();
+        Models::FileType type = static_cast<Models::FileType>(typeInt);
+
+        if (type == Models::FileType::Directory) {
+            // 检查是否有"加载中..."占位符（表示未加载）
+            if (current->childCount() == 1 && current->child(0)->text(0) == tr("加载中...")) {
+                // 展开项会触发 onItemExpanded，进而触发加载
+                current->setExpanded(true);
+                Utils::Logger::instance()->log(Utils::Logger::Debug,
+                    QString("expandAllUnloadedDirectories: 展开目录 %1").arg(current->text(0)));
+            } else {
+                // 已加载的目录，递归处理其子项
+                for (int i = 0; i < current->childCount(); ++i) {
+                    QTreeWidgetItem* child = current->child(i);
+                    if (child->text(0) != tr("加载中...")) {
+                        itemsToProcess.append(child);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void SnapshotBrowserDialog::onSearchTimerTimeout()
+{
+    // 定时器触发，执行实际的搜索过滤
+    if (!m_pendingSearchText.isEmpty()) {
+        performSearch(m_pendingSearchText);
+    }
+}
+
+void SnapshotBrowserDialog::performSearch(const QString& searchText)
+{
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("performSearch: 执行搜索，关键词='%1'").arg(searchText));
+
+    int matchCount = 0;
+
+    // 递归过滤所有项
+    for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
+        QTreeWidgetItem* item = m_treeWidget->topLevelItem(i);
+        bool hasMatch = filterTreeItem(item, searchText);
+        item->setHidden(!hasMatch);
+        if (hasMatch) {
+            matchCount++;
+        }
+    }
+
+    m_statusLabel->setText(tr("找到 %1 个匹配项").arg(matchCount));
+    m_isSearching = false;
+
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("performSearch: 搜索完成，匹配 %1 项").arg(matchCount));
 }
 
 } // namespace UI
