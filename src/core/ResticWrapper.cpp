@@ -136,8 +136,10 @@ bool ResticWrapper::prune(const Models::Repository& repo, const QString& passwor
                          int keepLast, int keepDaily, int keepWeekly,
                          int keepMonthly, int keepYearly)
 {
+    // 注意：保留策略参数应该用于 forget 命令，而不是 prune 命令
+    // 正确的做法是使用 forget --prune 来一次性完成标记删除和清理操作
     QStringList args;
-    args << "prune";
+    args << "forget" << "--prune";
 
     if (keepLast > 0) {
         args << "--keep-last" << QString::number(keepLast);

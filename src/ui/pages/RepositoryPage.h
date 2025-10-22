@@ -35,6 +35,9 @@ private slots:
     void onUnlockRepository();
     void onPruneRepository();
     void onCreateRepositoryFinished();
+    void onCheckRepositoryFinished();
+    void onUnlockRepositoryFinished();
+    void onPruneRepositoryFinished();
     void onUpdateProgress();
     void onProgressCancelled();
 
@@ -42,12 +45,17 @@ private:
 
     Ui::RepositoryPage* ui;
     QFutureWatcher<int>* m_createRepoWatcher;
+    QFutureWatcher<bool>* m_checkRepoWatcher;
+    QFutureWatcher<bool>* m_unlockRepoWatcher;
+    QFutureWatcher<bool>* m_pruneRepoWatcher;
     ProgressDialog* m_progressDialog;
     QTimer* m_progressTimer;
     QTimer* m_timeoutTimer;
     int m_progressValue;
     Models::Repository m_pendingRepo;
     QString m_pendingPassword;
+    int m_currentOperationRepoId;
+    QString m_currentOperationPassword;
 };
 
 } // namespace UI

@@ -1,8 +1,11 @@
 #include "RepositoryPage.h"
 #include "ui_RepositoryPage.h"
 #include "../../core/RepositoryManager.h"
+#include "../../core/ResticWrapper.h"
+#include "../../data/PasswordManager.h"
 #include "../wizards/CreateRepoWizard.h"
 #include "../dialogs/ProgressDialog.h"
+#include "../dialogs/PruneOptionsDialog.h"
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QApplication>
@@ -16,10 +19,14 @@ RepositoryPage::RepositoryPage(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::RepositoryPage)
     , m_createRepoWatcher(nullptr)
+    , m_checkRepoWatcher(nullptr)
+    , m_unlockRepoWatcher(nullptr)
+    , m_pruneRepoWatcher(nullptr)
     , m_progressDialog(nullptr)
     , m_progressTimer(nullptr)
     , m_timeoutTimer(nullptr)
     , m_progressValue(0)
+    , m_currentOperationRepoId(-1)
 {
     ui->setupUi(this);
 
@@ -57,9 +64,26 @@ RepositoryPage::~RepositoryPage()
     }
     if (m_createRepoWatcher) {
         m_createRepoWatcher->cancel();
-        // waitForFinished() 在析构函数中可以阻塞
         if (m_createRepoWatcher->isRunning()) {
             m_createRepoWatcher->waitForFinished();
+        }
+    }
+    if (m_checkRepoWatcher) {
+        m_checkRepoWatcher->cancel();
+        if (m_checkRepoWatcher->isRunning()) {
+            m_checkRepoWatcher->waitForFinished();
+        }
+    }
+    if (m_unlockRepoWatcher) {
+        m_unlockRepoWatcher->cancel();
+        if (m_unlockRepoWatcher->isRunning()) {
+            m_unlockRepoWatcher->waitForFinished();
+        }
+    }
+    if (m_pruneRepoWatcher) {
+        m_pruneRepoWatcher->cancel();
+        if (m_pruneRepoWatcher->isRunning()) {
+            m_pruneRepoWatcher->waitForFinished();
         }
     }
     // 注意：定时器和 watcher 的 parent 是 this，会自动删除
@@ -370,10 +394,9 @@ void RepositoryPage::onCheckRepository()
         return;
     }
 
-    // 获取仓库ID和名称
+    // 获取仓库ID
     QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
     int repoId = nameItem->data(Qt::UserRole).toInt();
-    QString repoName = nameItem->text();
 
     // 获取仓库信息
     Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
@@ -384,8 +407,84 @@ void RepositoryPage::onCheckRepository()
         return;
     }
 
-    QMessageBox::information(this, tr("检查仓库"),
-        tr("正在检查仓库 \"%1\"...\n此功能即将实现。").arg(repo.name));
+    // 获取密码
+    Data::PasswordManager* passMgr = Data::PasswordManager::instance();
+    QString password;
+    if (!passMgr->getPassword(repo.id, password)) {
+        bool ok;
+        password = QInputDialog::getText(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
+            QLineEdit::Password, QString(), &ok);
+
+        if (!ok || password.isEmpty()) {
+            return;
+        }
+
+        // 保存密码到密码管理器
+        passMgr->setPassword(repo.id, password);
+    }
+
+    // 询问是否进行彻底检查
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("检查选项"),
+        tr("是否进行彻底检查（读取所有数据包）？\n\n"
+           "• 快速检查：仅验证仓库结构和索引（推荐，速度快）\n"
+           "• 彻底检查：读取并验证所有数据包（耗时较长，但更完整）"),
+        QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
+        QMessageBox::No
+    );
+
+    if (reply == QMessageBox::Cancel) {
+        return;
+    }
+
+    bool readData = (reply == QMessageBox::Yes);
+
+    // 保存当前操作的仓库ID和密码
+    m_currentOperationRepoId = repo.id;
+    m_currentOperationPassword = password;
+
+    // 创建进度对话框
+    if (m_progressDialog) {
+        delete m_progressDialog;
+    }
+    m_progressDialog = new ProgressDialog(this);
+    m_progressDialog->setTitle(tr("检查仓库"));
+    m_progressDialog->setMessage(tr("正在检查仓库 \"%1\"，请稍候...").arg(repo.name));
+    m_progressDialog->setProgress(0);
+    m_progressDialog->setWindowModality(Qt::ApplicationModal);
+    connect(m_progressDialog, &ProgressDialog::cancelled,
+            this, &RepositoryPage::onProgressCancelled);
+    m_progressDialog->show();
+
+    // 启动进度更新定时器
+    m_progressValue = 0;
+    m_progressTimer->start(200);
+
+    // 启动超时定时器（5分钟超时）
+    m_timeoutTimer->start(300000);
+
+    // 在后台线程执行检查
+    if (m_checkRepoWatcher) {
+        delete m_checkRepoWatcher;
+    }
+    m_checkRepoWatcher = new QFutureWatcher<bool>(this);
+    connect(m_checkRepoWatcher, &QFutureWatcher<bool>::finished,
+            this, &RepositoryPage::onCheckRepositoryFinished);
+
+    // 复制值避免跨线程问题
+    Models::Repository repoToCheck = repo;
+    QString passwordToUse = password;
+
+    QTimer::singleShot(50, [this, repoToCheck, passwordToUse, readData]() {
+        QFuture<bool> future = QtConcurrent::run([repoToCheck, passwordToUse, readData]() {
+            Core::ResticWrapper wrapper;
+            return wrapper.checkRepository(repoToCheck, passwordToUse, readData);
+        });
+
+        m_checkRepoWatcher->setFuture(future);
+    });
 }
 
 void RepositoryPage::onUnlockRepository()
@@ -397,10 +496,9 @@ void RepositoryPage::onUnlockRepository()
         return;
     }
 
-    // 获取仓库ID和名称
+    // 获取仓库ID
     QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
     int repoId = nameItem->data(Qt::UserRole).toInt();
-    QString repoName = nameItem->text();
 
     // 获取仓库信息
     Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
@@ -411,16 +509,82 @@ void RepositoryPage::onUnlockRepository()
         return;
     }
 
-    // 确认解锁
-    int ret = QMessageBox::question(this, tr("确认解锁"),
-        tr("确定要解锁仓库 \"%1\" 吗？\n这将删除该仓库的锁文件。").arg(repo.name),
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::No);
+    // 获取密码
+    Data::PasswordManager* passMgr = Data::PasswordManager::instance();
+    QString password;
+    if (!passMgr->getPassword(repo.id, password)) {
+        bool ok;
+        password = QInputDialog::getText(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
+            QLineEdit::Password, QString(), &ok);
 
-    if (ret == QMessageBox::Yes) {
-        QMessageBox::information(this, tr("解锁仓库"),
-            tr("仓库解锁功能即将实现。"));
+        if (!ok || password.isEmpty()) {
+            return;
+        }
+
+        // 保存密码到密码管理器
+        passMgr->setPassword(repo.id, password);
     }
+
+    // 确认解锁
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("确认解锁"),
+        tr("确定要解锁仓库 \"%1\" 吗？\n\n"
+           "这将删除该仓库的锁文件。\n"
+           "通常在异常中断后需要解锁仓库才能继续操作。").arg(repo.name),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No
+    );
+
+    if (reply != QMessageBox::Yes) {
+        return;
+    }
+
+    // 保存当前操作的仓库ID和密码
+    m_currentOperationRepoId = repo.id;
+    m_currentOperationPassword = password;
+
+    // 创建进度对话框
+    if (m_progressDialog) {
+        delete m_progressDialog;
+    }
+    m_progressDialog = new ProgressDialog(this);
+    m_progressDialog->setTitle(tr("解锁仓库"));
+    m_progressDialog->setMessage(tr("正在解锁仓库 \"%1\"，请稍候...").arg(repo.name));
+    m_progressDialog->setProgress(0);
+    m_progressDialog->setWindowModality(Qt::ApplicationModal);
+    connect(m_progressDialog, &ProgressDialog::cancelled,
+            this, &RepositoryPage::onProgressCancelled);
+    m_progressDialog->show();
+
+    // 启动进度更新定时器
+    m_progressValue = 0;
+    m_progressTimer->start(200);
+
+    // 启动超时定时器（1分钟超时）
+    m_timeoutTimer->start(60000);
+
+    // 在后台线程执行解锁
+    if (m_unlockRepoWatcher) {
+        delete m_unlockRepoWatcher;
+    }
+    m_unlockRepoWatcher = new QFutureWatcher<bool>(this);
+    connect(m_unlockRepoWatcher, &QFutureWatcher<bool>::finished,
+            this, &RepositoryPage::onUnlockRepositoryFinished);
+
+    // 复制值避免跨线程问题
+    Models::Repository repoToUnlock = repo;
+    QString passwordToUse = password;
+
+    QTimer::singleShot(50, [this, repoToUnlock, passwordToUse]() {
+        QFuture<bool> future = QtConcurrent::run([repoToUnlock, passwordToUse]() {
+            Core::ResticWrapper wrapper;
+            return wrapper.unlockRepository(repoToUnlock, passwordToUse);
+        });
+
+        m_unlockRepoWatcher->setFuture(future);
+    });
 }
 
 void RepositoryPage::onPruneRepository()
@@ -432,10 +596,9 @@ void RepositoryPage::onPruneRepository()
         return;
     }
 
-    // 获取仓库ID和名称
+    // 获取仓库ID
     QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
     int repoId = nameItem->data(Qt::UserRole).toInt();
-    QString repoName = nameItem->text();
 
     // 获取仓库信息
     Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
@@ -446,15 +609,199 @@ void RepositoryPage::onPruneRepository()
         return;
     }
 
-    // 确认维护
-    int ret = QMessageBox::question(this, tr("确认维护"),
-        tr("确定要维护仓库 \"%1\" 吗？\n这将执行 prune 操作，删除不再需要的数据。").arg(repo.name),
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::No);
+    // 获取密码
+    Data::PasswordManager* passMgr = Data::PasswordManager::instance();
+    QString password;
+    if (!passMgr->getPassword(repo.id, password)) {
+        bool ok;
+        password = QInputDialog::getText(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
+            QLineEdit::Password, QString(), &ok);
 
-    if (ret == QMessageBox::Yes) {
-        QMessageBox::information(this, tr("维护仓库"),
-            tr("仓库维护功能即将实现。"));
+        if (!ok || password.isEmpty()) {
+            return;
+        }
+
+        // 保存密码到密码管理器
+        passMgr->setPassword(repo.id, password);
+    }
+
+    // 显示保留策略配置对话框
+    PruneOptionsDialog optionsDialog(this);
+    if (optionsDialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    // 获取保留策略
+    int keepLast = optionsDialog.getKeepLast();
+    int keepDaily = optionsDialog.getKeepDaily();
+    int keepWeekly = optionsDialog.getKeepWeekly();
+    int keepMonthly = optionsDialog.getKeepMonthly();
+    int keepYearly = optionsDialog.getKeepYearly();
+
+    // 检查至少设置了一个保留策略
+    if (keepLast == 0 && keepDaily == 0 && keepWeekly == 0 &&
+        keepMonthly == 0 && keepYearly == 0) {
+        QMessageBox::warning(this, tr("警告"),
+            tr("请至少设置一个保留策略！"));
+        return;
+    }
+
+    // 确认维护
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("确认维护"),
+        tr("确定要维护仓库 \"%1\" 吗？\n\n"
+           "这将执行 prune 操作，删除不符合保留策略的快照数据。\n"
+           "⚠️ 此操作不可恢复！").arg(repo.name),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No
+    );
+
+    if (reply != QMessageBox::Yes) {
+        return;
+    }
+
+    // 保存当前操作的仓库ID和密码
+    m_currentOperationRepoId = repo.id;
+    m_currentOperationPassword = password;
+
+    // 创建进度对话框
+    if (m_progressDialog) {
+        delete m_progressDialog;
+    }
+    m_progressDialog = new ProgressDialog(this);
+    m_progressDialog->setTitle(tr("维护仓库"));
+    m_progressDialog->setMessage(tr("正在维护仓库 \"%1\"，请稍候...").arg(repo.name));
+    m_progressDialog->setProgress(0);
+    m_progressDialog->setWindowModality(Qt::ApplicationModal);
+    connect(m_progressDialog, &ProgressDialog::cancelled,
+            this, &RepositoryPage::onProgressCancelled);
+    m_progressDialog->show();
+
+    // 启动进度更新定时器
+    m_progressValue = 0;
+    m_progressTimer->start(200);
+
+    // 启动超时定时器（10分钟超时）
+    m_timeoutTimer->start(600000);
+
+    // 在后台线程执行 prune
+    if (m_pruneRepoWatcher) {
+        delete m_pruneRepoWatcher;
+    }
+    m_pruneRepoWatcher = new QFutureWatcher<bool>(this);
+    connect(m_pruneRepoWatcher, &QFutureWatcher<bool>::finished,
+            this, &RepositoryPage::onPruneRepositoryFinished);
+
+    // 复制值避免跨线程问题
+    Models::Repository repoToPrune = repo;
+    QString passwordToUse = password;
+
+    QTimer::singleShot(50, [this, repoToPrune, passwordToUse, keepLast, keepDaily,
+                             keepWeekly, keepMonthly, keepYearly]() {
+        QFuture<bool> future = QtConcurrent::run([repoToPrune, passwordToUse, keepLast,
+                                                   keepDaily, keepWeekly, keepMonthly, keepYearly]() {
+            Core::ResticWrapper wrapper;
+            return wrapper.prune(repoToPrune, passwordToUse, keepLast, keepDaily,
+                               keepWeekly, keepMonthly, keepYearly);
+        });
+
+        m_pruneRepoWatcher->setFuture(future);
+    });
+}
+
+void RepositoryPage::onCheckRepositoryFinished()
+{
+    // 停止进度更新定时器
+    m_progressTimer->stop();
+
+    // 停止超时定时器
+    m_timeoutTimer->stop();
+
+    bool success = m_checkRepoWatcher->result();
+
+    // 关闭进度对话框
+    if (m_progressDialog) {
+        m_progressDialog->setCompleted(success);
+        m_progressDialog->close();
+        m_progressDialog->deleteLater();
+        m_progressDialog = nullptr;
+    }
+
+    // 获取仓库名称
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(m_currentOperationRepoId);
+
+    if (success) {
+        QMessageBox::information(this, tr("检查完成"),
+            tr("仓库 \"%1\" 检查完成！\n\n仓库状态正常，未发现错误。").arg(repo.name));
+    } else {
+        QMessageBox::critical(this, tr("检查失败"),
+            tr("仓库 \"%1\" 检查失败！\n\n请查看日志了解详情。").arg(repo.name));
+    }
+}
+
+void RepositoryPage::onUnlockRepositoryFinished()
+{
+    // 停止进度更新定时器
+    m_progressTimer->stop();
+
+    // 停止超时定时器
+    m_timeoutTimer->stop();
+
+    bool success = m_unlockRepoWatcher->result();
+
+    // 关闭进度对话框
+    if (m_progressDialog) {
+        m_progressDialog->setCompleted(success);
+        m_progressDialog->close();
+        m_progressDialog->deleteLater();
+        m_progressDialog = nullptr;
+    }
+
+    // 获取仓库名称
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(m_currentOperationRepoId);
+
+    if (success) {
+        QMessageBox::information(this, tr("解锁成功"),
+            tr("仓库 \"%1\" 已成功解锁！\n\n现在可以正常进行备份和恢复操作。").arg(repo.name));
+    } else {
+        QMessageBox::critical(this, tr("解锁失败"),
+            tr("仓库 \"%1\" 解锁失败！\n\n请查看日志了解详情。").arg(repo.name));
+    }
+}
+
+void RepositoryPage::onPruneRepositoryFinished()
+{
+    // 停止进度更新定时器
+    m_progressTimer->stop();
+
+    // 停止超时定时器
+    m_timeoutTimer->stop();
+
+    bool success = m_pruneRepoWatcher->result();
+
+    // 关闭进度对话框
+    if (m_progressDialog) {
+        m_progressDialog->setCompleted(success);
+        m_progressDialog->close();
+        m_progressDialog->deleteLater();
+        m_progressDialog = nullptr;
+    }
+
+    // 获取仓库名称
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(m_currentOperationRepoId);
+
+    if (success) {
+        QMessageBox::information(this, tr("维护完成"),
+            tr("仓库 \"%1\" 维护完成！\n\n"
+               "已删除不符合保留策略的快照数据，释放了存储空间。").arg(repo.name));
+    } else {
+        QMessageBox::critical(this, tr("维护失败"),
+            tr("仓库 \"%1\" 维护失败！\n\n请查看日志了解详情。").arg(repo.name));
     }
 }
 

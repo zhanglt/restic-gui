@@ -90,7 +90,8 @@ SOURCES += \
     src/ui/dialogs/ProgressDialog.cpp \
     src/ui/dialogs/SettingsDialog.cpp \
     src/ui/dialogs/CreateTaskDialog.cpp \
-    src/ui/dialogs/SnapshotBrowserDialog.cpp
+    src/ui/dialogs/SnapshotBrowserDialog.cpp \
+    src/ui/dialogs/PruneOptionsDialog.cpp
 
 # UI - 自定义控件
 SOURCES += \
@@ -134,6 +135,7 @@ HEADERS += \
     src/ui/dialogs/SettingsDialog.h \
     src/ui/dialogs/CreateTaskDialog.h \
     src/ui/dialogs/SnapshotBrowserDialog.h \
+    src/ui/dialogs/PruneOptionsDialog.h \
     src/ui/widgets/SnapshotListWidget.h \
     src/ui/widgets/FileTreeWidget.h
 
@@ -148,7 +150,8 @@ FORMS += \
     src/ui/pages/RestorePage.ui \
     src/ui/pages/StatsPage.ui \
     src/ui/dialogs/ProgressDialog.ui \
-    src/ui/dialogs/SettingsDialog.ui
+    src/ui/dialogs/SettingsDialog.ui \
+    src/ui/dialogs/PruneOptionsDialog.ui
 
 # ===== 资源文件 =====
 
