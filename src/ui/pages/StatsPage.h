@@ -18,11 +18,15 @@ public:
     explicit StatsPage(QWidget* parent = nullptr);
     ~StatsPage();
 
+protected:
+    void showEvent(QShowEvent* event) override;
+
 public slots:
     void loadStats();
 
 private:
     Ui::StatsPage* ui;
+    bool m_firstShow;
 };
 
 } // namespace UI
