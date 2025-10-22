@@ -6,6 +6,7 @@
 #include "BackupManager.h"
 #include "ResticWrapper.h"
 #include "RepositoryManager.h"
+#include "SchedulerManager.h"
 #include "../data/DatabaseManager.h"
 #include "../data/PasswordManager.h"
 #include "../utils/Logger.h"
@@ -160,8 +161,24 @@ bool BackupManager::runBackupTask(int taskId)
         Models::BackupResult result;
         result.taskId = taskId;
 
+        // 连接错误信号以捕获错误消息
+        QString errorMessage;
+        connect(&wrapper, &ResticWrapper::commandError, [&errorMessage](const QString& error) {
+            errorMessage = error;
+        });
+        connect(&wrapper, &ResticWrapper::standardError, [&errorMessage](const QString& error) {
+            if (!error.isEmpty()) {
+                errorMessage += error;
+            }
+        });
+
         bool success = wrapper.backup(repo, password, task.sourcePaths,
                                       task.excludePatterns, task.tags, result);
+
+        // 如果备份失败且没有错误消息，使用捕获的错误消息
+        if (!success && result.errorMessage.isEmpty()) {
+            result.errorMessage = errorMessage;
+        }
 
         // 保存备份历史
         Data::DatabaseManager::instance()->insertBackupHistory(result);
@@ -170,6 +187,13 @@ bool BackupManager::runBackupTask(int taskId)
         Models::BackupTask updatedTask = task;
         updatedTask.lastRun = QDateTime::currentDateTime();
         Data::DatabaseManager::instance()->updateBackupTask(updatedTask);
+
+        // 如果任务有调度计划且启用，更新下次运行时间
+        if (task.enabled &&
+            task.schedule.type != Models::Schedule::None &&
+            task.schedule.type != Models::Schedule::Manual) {
+            SchedulerManager::instance()->updateTaskNextRun(taskId);
+        }
 
         m_running = false;
         m_currentTaskId = -1;
@@ -180,6 +204,20 @@ bool BackupManager::runBackupTask(int taskId)
             Utils::Logger::instance()->log(Utils::Logger::Info, "备份任务完成");
         } else {
             Utils::Logger::instance()->log(Utils::Logger::Error, "备份任务失败");
+
+            // 检查是否是密码错误
+            if (result.errorMessage.contains("wrong password") ||
+                result.errorMessage.contains("no key found")) {
+                Utils::Logger::instance()->log(Utils::Logger::Warning,
+                    QString("任务 %1 密码错误，清除缓存的密码").arg(taskId));
+
+                // 清除错误的密码
+                Data::PasswordManager::instance()->removePassword(task.repositoryId);
+
+                // 发出密码错误信号
+                emit passwordError(taskId, task.repositoryId);
+            }
+
             emit backupError(result.errorMessage);
         }
     });

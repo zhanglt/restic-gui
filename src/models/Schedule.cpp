@@ -6,6 +6,7 @@ namespace Models {
 QString Schedule::description() const
 {
     switch (type) {
+    case Minutely: return "每分钟";
     case Hourly:  return "每小时";
     case Daily:   return QString("每天 %1").arg(time.toString("HH:mm"));
     case Weekly:  return QString("每周%1 %2").arg(dayOfWeek).arg(time.toString("HH:mm"));

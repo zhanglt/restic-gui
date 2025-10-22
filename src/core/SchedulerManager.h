@@ -25,6 +25,12 @@ public:
     // 手动触发检查
     void checkScheduledTasks();
 
+    // 更新任务的下次运行时间
+    void updateTaskNextRun(int taskId);
+
+    // 移除任务的调度
+    void removeTask(int taskId);
+
 signals:
     void taskScheduled(int taskId, const QDateTime& nextRun);
     void taskTriggered(int taskId);

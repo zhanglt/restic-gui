@@ -27,6 +27,7 @@ private slots:
     void onDeleteTask();
     void onRunTask();
     void onRefresh();
+    void onPasswordError(int taskId, int repoId);
 
 private:
     Ui::BackupPage* ui;

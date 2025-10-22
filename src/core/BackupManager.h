@@ -49,6 +49,7 @@ signals:
     void backupProgress(int percent, const QString& message);
     void backupFinished(int taskId, bool success);
     void backupError(const QString& error);
+    void passwordError(int taskId, int repoId);  // 密码错误信号
 
 private:
     explicit BackupManager(QObject* parent = nullptr);

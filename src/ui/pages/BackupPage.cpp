@@ -5,6 +5,7 @@
 #include "../../data/PasswordManager.h"
 #include "../../core/RepositoryManager.h"
 #include "../../core/BackupManager.h"
+#include "../../core/SchedulerManager.h"
 #include "../../utils/Logger.h"
 #include <QMessageBox>
 #include <QInputDialog>
@@ -32,6 +33,9 @@ BackupPage::BackupPage(QWidget* parent)
         Q_UNUSED(success);
         loadTasks();
     });
+
+    // 监听密码错误信号
+    connect(backupMgr, &Core::BackupManager::passwordError, this, &BackupPage::onPasswordError);
 
     loadTasks();
 }
@@ -77,6 +81,9 @@ void BackupPage::loadTasks()
         switch (task.schedule.type) {
         case Models::Schedule::Manual:
             schedule = tr("手动");
+            break;
+        case Models::Schedule::Minutely:
+            schedule = tr("每分钟");
             break;
         case Models::Schedule::Hourly:
             schedule = tr("每小时");
@@ -168,6 +175,14 @@ void BackupPage::onCreateTask()
         if (taskId > 0) {
             Utils::Logger::instance()->log(Utils::Logger::Info,
                 QString("任务 \"%1\" 创建成功，ID=%2").arg(task.name).arg(taskId));
+
+            // 如果任务有调度计划且启用，计算下次运行时间
+            if (task.enabled &&
+                task.schedule.type != Models::Schedule::None &&
+                task.schedule.type != Models::Schedule::Manual) {
+                Core::SchedulerManager::instance()->updateTaskNextRun(taskId);
+            }
+
             QMessageBox::information(this, tr("成功"),
                 tr("备份任务 \"%1\" 创建成功！").arg(task.name));
             loadTasks();
@@ -215,6 +230,16 @@ void BackupPage::onEditTask()
         updatedTask.id = taskId; // 保持ID不变
 
         if (db->updateBackupTask(updatedTask)) {
+            // 如果任务有调度计划且启用，重新计算下次运行时间
+            if (updatedTask.enabled &&
+                updatedTask.schedule.type != Models::Schedule::None &&
+                updatedTask.schedule.type != Models::Schedule::Manual) {
+                Core::SchedulerManager::instance()->updateTaskNextRun(taskId);
+            } else {
+                // 如果任务被禁用或改为手动，从调度器中移除
+                Core::SchedulerManager::instance()->removeTask(taskId);
+            }
+
             QMessageBox::information(this, tr("成功"), tr("任务已更新"));
             loadTasks();
         } else {
@@ -249,6 +274,9 @@ void BackupPage::onDeleteTask()
     if (reply == QMessageBox::Yes) {
         Data::DatabaseManager* db = Data::DatabaseManager::instance();
         if (db->deleteBackupTask(taskId)) {
+            // 从调度器中移除任务
+            Core::SchedulerManager::instance()->removeTask(taskId);
+
             QMessageBox::information(this, tr("成功"), tr("任务已删除"));
             loadTasks();
         } else {
@@ -338,6 +366,27 @@ void BackupPage::onRunTask()
 void BackupPage::onRefresh()
 {
     loadTasks();
+}
+
+void BackupPage::onPasswordError(int taskId, int repoId)
+{
+    Q_UNUSED(taskId);
+
+    // 获取仓库信息
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(repoId);
+
+    if (repo.id <= 0) {
+        return;
+    }
+
+    // 提示用户密码错误
+    QMessageBox::warning(this, tr("密码错误"),
+        tr("仓库 \"%1\" 的密码不正确。\n\n"
+           "错误的密码已被清除，下次运行时将提示重新输入。").arg(repo.name));
+
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("已清除仓库 %1 的错误密码").arg(repo.name));
 }
 
 } // namespace UI

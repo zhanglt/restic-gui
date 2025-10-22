@@ -62,6 +62,7 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
     // 计划类型
     QComboBox* scheduleComboBox = new QComboBox(this);
     scheduleComboBox->addItem(tr("手动"), static_cast<int>(Models::Schedule::Manual));
+    scheduleComboBox->addItem(tr("每分钟"), static_cast<int>(Models::Schedule::Minutely));
     scheduleComboBox->addItem(tr("每小时"), static_cast<int>(Models::Schedule::Hourly));
     scheduleComboBox->addItem(tr("每天"), static_cast<int>(Models::Schedule::Daily));
     scheduleComboBox->addItem(tr("每周"), static_cast<int>(Models::Schedule::Weekly));

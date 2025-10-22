@@ -18,6 +18,7 @@ struct Schedule
     enum Type {
         None = 0,
         Manual,
+        Minutely,
         Hourly,
         Daily,
         Weekly,

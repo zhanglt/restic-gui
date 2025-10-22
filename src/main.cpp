@@ -14,6 +14,7 @@
 #include "utils/Logger.h"
 #include "data/DatabaseManager.h"
 #include "data/ConfigManager.h"
+#include "core/SchedulerManager.h"
 
 using namespace ResticGUI;
 
@@ -65,6 +66,13 @@ int main(int argc, char *argv[])
     // 加载配置
     Utils::Logger::instance()->info(QString("restic 路径: %1")
         .arg(Data::ConfigManager::instance()->getResticPath()));
+
+    // 初始化并启动调度管理器
+    Utils::Logger::instance()->info("初始化调度管理器");
+    Core::SchedulerManager* scheduler = Core::SchedulerManager::instance();
+    scheduler->initialize();
+    scheduler->start();
+    Utils::Logger::instance()->info("调度管理器已启动");
 
     // 创建并显示主窗口
     UI::MainWindow mainWindow;
