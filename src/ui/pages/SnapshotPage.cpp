@@ -3,8 +3,10 @@
 #include "../../core/RepositoryManager.h"
 #include "../../core/SnapshotManager.h"
 #include "../../data/PasswordManager.h"
+#include "../../utils/Logger.h"
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QtConcurrent>
 
 namespace ResticGUI {
 namespace UI {
@@ -13,8 +15,16 @@ SnapshotPage::SnapshotPage(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::SnapshotPage)
     , m_currentRepositoryId(-1)
+    , m_firstShow(true)
+    , m_isLoading(false)
+    , m_snapshotWatcher(nullptr)
 {
     ui->setupUi(this);
+
+    // 初始化异步加载器
+    m_snapshotWatcher = new QFutureWatcher<QList<Models::Snapshot>>(this);
+    connect(m_snapshotWatcher, &QFutureWatcher<QList<Models::Snapshot>>::finished,
+            this, &SnapshotPage::onSnapshotsLoaded);
 
     // 先加载仓库列表（此时不连接信号，避免触发密码输入）
     loadRepositories();
@@ -31,6 +41,17 @@ SnapshotPage::SnapshotPage(QWidget* parent)
 SnapshotPage::~SnapshotPage()
 {
     delete ui;
+}
+
+void SnapshotPage::showEvent(QShowEvent* event)
+{
+    QWidget::showEvent(event);
+
+    // 第一次显示时自动加载快照
+    if (m_firstShow && m_currentRepositoryId > 0) {
+        m_firstShow = false;
+        loadSnapshots();
+    }
 }
 
 void SnapshotPage::loadRepositories()
@@ -69,19 +90,22 @@ void SnapshotPage::loadRepositories()
     }
 
     // blocker 在这里析构，信号解除阻塞
-    // 手动触发一次快照加载（因为信号被阻塞了，需要手动调用）
+    // 不在构造时自动加载快照，避免启动时不必要的restic命令执行
+    // 用户切换到该页面或选择仓库时才会加载快照
     blocker.unblock();
-
-    // 如果有仓库被选中，加载快照
-    if (m_currentRepositoryId > 0) {
-        loadSnapshots();
-    }
 }
 
 void SnapshotPage::loadSnapshots()
 {
     if (m_currentRepositoryId <= 0) {
         ui->tableWidget->setRowCount(0);
+        return;
+    }
+
+    // 防止重复加载
+    if (m_isLoading) {
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            "快照正在加载中，忽略重复请求");
         return;
     }
 
@@ -105,50 +129,38 @@ void SnapshotPage::loadSnapshots()
         passMgr->setPassword(m_currentRepositoryId, password);
     }
 
-    // 获取快照列表
-    Core::SnapshotManager* snapshotMgr = Core::SnapshotManager::instance();
-    QList<Models::Snapshot> snapshots = snapshotMgr->listSnapshots(m_currentRepositoryId, true);
-
-    // 清空表格
-    ui->tableWidget->setRowCount(0);
-    ui->tableWidget->setRowCount(snapshots.size());
-
-    // 填充表格
-    for (int i = 0; i < snapshots.size(); ++i) {
-        const Models::Snapshot& snapshot = snapshots[i];
-
-        // 快照ID（显示短ID）
-        QString shortId = snapshot.id.left(8);
-        QTableWidgetItem* idItem = new QTableWidgetItem(shortId);
-        idItem->setData(Qt::UserRole, snapshot.id); // 存储完整ID
-        ui->tableWidget->setItem(i, 0, idItem);
-
-        // 时间
-        QString timeStr = snapshot.time.toString("yyyy-MM-dd HH:mm:ss");
-        QTableWidgetItem* timeItem = new QTableWidgetItem(timeStr);
-        ui->tableWidget->setItem(i, 1, timeItem);
-
-        // 主机名
-        QTableWidgetItem* hostnameItem = new QTableWidgetItem(snapshot.hostname);
-        ui->tableWidget->setItem(i, 2, hostnameItem);
-
-        // 路径（显示第一个路径，如果有多个则显示数量）
-        QString pathStr = snapshot.paths.isEmpty() ? tr("(无)") :
-            (snapshot.paths.size() == 1 ? snapshot.paths.first() :
-             QString("%1 (+%2个)").arg(snapshot.paths.first()).arg(snapshot.paths.size() - 1));
-        QTableWidgetItem* pathItem = new QTableWidgetItem(pathStr);
-        ui->tableWidget->setItem(i, 3, pathItem);
-
-        // 标签
-        QString tagsStr = snapshot.tags.join(", ");
-        QTableWidgetItem* tagsItem = new QTableWidgetItem(tagsStr);
-        ui->tableWidget->setItem(i, 4, tagsItem);
+    // 如果已经有任务在运行，取消它
+    if (m_snapshotWatcher->isRunning()) {
+        Utils::Logger::instance()->log(Utils::Logger::Debug, "取消之前的快照加载任务");
+        m_snapshotWatcher->cancel();
+        m_snapshotWatcher->waitForFinished();
     }
+
+    // 设置加载状态
+    m_isLoading = true;
+
+    // 显示加载提示
+    showLoadingIndicator(true);
+
+    // 在后台线程异步加载快照列表
+    int repoId = m_currentRepositoryId;
+    QFuture<QList<Models::Snapshot>> future = QtConcurrent::run([repoId]() {
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("开始异步加载快照，仓库ID: %1").arg(repoId));
+        Core::SnapshotManager* snapshotMgr = Core::SnapshotManager::instance();
+        return snapshotMgr->listSnapshots(repoId, true);
+    });
+
+    m_snapshotWatcher->setFuture(future);
 }
 
 void SnapshotPage::onRepositoryChanged(int index)
 {
     m_currentRepositoryId = ui->repositoryComboBox->itemData(index).toInt();
+
+    // 切换仓库时，重置加载状态以允许加载新仓库的快照
+    m_isLoading = false;
+
     loadSnapshots();
 }
 
@@ -247,6 +259,92 @@ void SnapshotPage::onRestoreSnapshot()
 void SnapshotPage::onRefresh()
 {
     loadSnapshots();
+}
+
+void SnapshotPage::onSnapshotsLoaded()
+{
+    // 重置加载状态
+    m_isLoading = false;
+
+    // 隐藏加载提示
+    showLoadingIndicator(false);
+
+    // 获取异步加载的结果
+    QList<Models::Snapshot> snapshots = m_snapshotWatcher->result();
+
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("已加载 %1 个快照").arg(snapshots.size()));
+
+    // 显示快照列表
+    displaySnapshots(snapshots);
+}
+
+void SnapshotPage::displaySnapshots(const QList<Models::Snapshot>& snapshots)
+{
+    // 清空表格
+    ui->tableWidget->setRowCount(0);
+    ui->tableWidget->setRowCount(snapshots.size());
+
+    // 填充表格
+    for (int i = 0; i < snapshots.size(); ++i) {
+        const Models::Snapshot& snapshot = snapshots[i];
+
+        // 快照ID（显示短ID）
+        QString shortId = snapshot.id.left(8);
+        QTableWidgetItem* idItem = new QTableWidgetItem(shortId);
+        idItem->setData(Qt::UserRole, snapshot.id); // 存储完整ID
+        ui->tableWidget->setItem(i, 0, idItem);
+
+        // 时间
+        QString timeStr = snapshot.time.toString("yyyy-MM-dd HH:mm:ss");
+        QTableWidgetItem* timeItem = new QTableWidgetItem(timeStr);
+        ui->tableWidget->setItem(i, 1, timeItem);
+
+        // 主机名
+        QTableWidgetItem* hostnameItem = new QTableWidgetItem(snapshot.hostname);
+        ui->tableWidget->setItem(i, 2, hostnameItem);
+
+        // 路径（显示第一个路径，如果有多个则显示数量）
+        QString pathStr = snapshot.paths.isEmpty() ? tr("(无)") :
+            (snapshot.paths.size() == 1 ? snapshot.paths.first() :
+             QString("%1 (+%2个)").arg(snapshot.paths.first()).arg(snapshot.paths.size() - 1));
+        QTableWidgetItem* pathItem = new QTableWidgetItem(pathStr);
+        ui->tableWidget->setItem(i, 3, pathItem);
+
+        // 标签
+        QString tagsStr = snapshot.tags.join(", ");
+        QTableWidgetItem* tagsItem = new QTableWidgetItem(tagsStr);
+        ui->tableWidget->setItem(i, 4, tagsItem);
+    }
+}
+
+void SnapshotPage::showLoadingIndicator(bool show)
+{
+    if (show) {
+        // 清空表格并显示"加载中..."提示
+        ui->tableWidget->setRowCount(1);
+        ui->tableWidget->setColumnCount(5);
+        QTableWidgetItem* loadingItem = new QTableWidgetItem(tr("正在加载快照列表，请稍候..."));
+        loadingItem->setTextAlignment(Qt::AlignCenter);
+        ui->tableWidget->setItem(0, 0, loadingItem);
+        ui->tableWidget->setSpan(0, 0, 1, 5); // 合并所有列
+
+        // 禁用操作按钮
+        ui->deleteButton->setEnabled(false);
+        ui->browseButton->setEnabled(false);
+        ui->restoreButton->setEnabled(false);
+        ui->refreshButton->setEnabled(false);
+    } else {
+        // 恢复表格列数
+        ui->tableWidget->clearSpans();
+        ui->tableWidget->setRowCount(0);
+
+        // 启用操作按钮
+        ui->deleteButton->setEnabled(true);
+        ui->browseButton->setEnabled(true);
+        ui->restoreButton->setEnabled(true);
+        ui->refreshButton->setEnabled(true);
+    }
 }
 
 } // namespace UI

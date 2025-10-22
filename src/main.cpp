@@ -58,7 +58,6 @@ int main(int argc, char *argv[])
         Utils::Logger::instance()->critical(QString("数据库初始化失败: %1").arg(error));
         return -1;
     }
-    Utils::Logger::instance()->info("数据库初始化成功");
 
     // 加载配置
     Utils::Logger::instance()->info(QString("restic 路径: %1")

@@ -11,6 +11,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QDir>
+#include <QtConcurrent>
 
 namespace ResticGUI {
 namespace UI {
@@ -19,8 +20,16 @@ RestorePage::RestorePage(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::RestorePage)
     , m_currentRepositoryId(-1)
+    , m_firstShow(true)
+    , m_isLoading(false)
+    , m_snapshotWatcher(nullptr)
 {
     ui->setupUi(this);
+
+    // 初始化异步加载器
+    m_snapshotWatcher = new QFutureWatcher<QList<Models::Snapshot>>(this);
+    connect(m_snapshotWatcher, &QFutureWatcher<QList<Models::Snapshot>>::finished,
+            this, &RestorePage::onSnapshotsLoaded);
 
     // 先加载仓库列表（此时不连接信号，避免触发密码输入）
     loadRepositories();
@@ -40,6 +49,17 @@ RestorePage::RestorePage(QWidget* parent)
 RestorePage::~RestorePage()
 {
     delete ui;
+}
+
+void RestorePage::showEvent(QShowEvent* event)
+{
+    QWidget::showEvent(event);
+
+    // 第一次显示时自动加载快照
+    if (m_firstShow && m_currentRepositoryId > 0) {
+        m_firstShow = false;
+        loadSnapshots();
+    }
 }
 
 void RestorePage::loadRepositories()
@@ -78,27 +98,33 @@ void RestorePage::loadRepositories()
     }
 
     // blocker 在这里析构，信号解除阻塞
-    // 手动触发一次快照加载（因为信号被阻塞了，需要手动调用）
+    // 不在构造时自动加载快照，避免启动时不必要的restic命令执行
+    // 用户切换到该页面或选择仓库时才会加载快照
     blocker.unblock();
-
-    // 如果有仓库被选中，加载快照
-    if (m_currentRepositoryId > 0) {
-        loadSnapshots();
-    }
 }
 
 void RestorePage::onRepositoryChanged(int index)
 {
     m_currentRepositoryId = ui->repositoryComboBox->itemData(index).toInt();
+
+    // 切换仓库时，重置加载状态以允许加载新仓库的快照
+    m_isLoading = false;
+
     loadSnapshots();
 }
 
 void RestorePage::loadSnapshots()
 {
-    ui->snapshotComboBox->clear();
-
     if (m_currentRepositoryId <= 0) {
+        ui->snapshotComboBox->clear();
         ui->snapshotComboBox->addItem(tr("(无快照)"), QString());
+        return;
+    }
+
+    // 防止重复加载
+    if (m_isLoading) {
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            "快照正在加载中，忽略重复请求");
         return;
     }
 
@@ -115,6 +141,7 @@ void RestorePage::loadSnapshots()
             QLineEdit::Password, QString(), &ok);
 
         if (!ok || password.isEmpty()) {
+            ui->snapshotComboBox->clear();
             ui->snapshotComboBox->addItem(tr("(需要密码)"), QString());
             return;
         }
@@ -123,33 +150,29 @@ void RestorePage::loadSnapshots()
         passMgr->setPassword(m_currentRepositoryId, password);
     }
 
-    // 获取快照列表
-    Core::SnapshotManager* snapshotMgr = Core::SnapshotManager::instance();
-    QList<Models::Snapshot> snapshots = snapshotMgr->listSnapshots(m_currentRepositoryId, true);
-
-    if (snapshots.isEmpty()) {
-        ui->snapshotComboBox->addItem(tr("(无快照)"), QString());
-        Utils::Logger::instance()->log(Utils::Logger::Info,
-            QString("仓库 %1 没有快照").arg(m_currentRepositoryId));
-        return;
+    // 如果已经有任务在运行，取消它
+    if (m_snapshotWatcher->isRunning()) {
+        Utils::Logger::instance()->log(Utils::Logger::Debug, "取消之前的快照加载任务");
+        m_snapshotWatcher->cancel();
+        m_snapshotWatcher->waitForFinished();
     }
 
-    // 填充快照下拉框（按时间倒序，最新的在前面）
-    for (int i = snapshots.size() - 1; i >= 0; --i) {
-        const Models::Snapshot& snapshot = snapshots[i];
-        QString displayText = QString("%1 - %2")
-            .arg(snapshot.time.toString("yyyy-MM-dd HH:mm:ss"))
-            .arg(snapshot.paths.isEmpty() ? tr("(无路径)") : snapshot.paths.first());
+    // 设置加载状态
+    m_isLoading = true;
 
-        if (displayText.length() > 80) {
-            displayText = displayText.left(77) + "...";
-        }
+    // 显示加载提示
+    showLoadingIndicator(true);
 
-        ui->snapshotComboBox->addItem(displayText, snapshot.id);
-    }
+    // 在后台线程异步加载快照列表
+    int repoId = m_currentRepositoryId;
+    QFuture<QList<Models::Snapshot>> future = QtConcurrent::run([repoId]() {
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("开始异步加载快照，仓库ID: %1").arg(repoId));
+        Core::SnapshotManager* snapshotMgr = Core::SnapshotManager::instance();
+        return snapshotMgr->listSnapshots(repoId, true);
+    });
 
-    Utils::Logger::instance()->log(Utils::Logger::Info,
-        QString("已加载 %1 个快照").arg(snapshots.size()));
+    m_snapshotWatcher->setFuture(future);
 }
 
 void RestorePage::onBrowse()
@@ -296,6 +319,63 @@ void RestorePage::onRestore()
     } else {
         progressDialog->deleteLater();
         QMessageBox::critical(this, tr("错误"), tr("无法启动恢复操作"));
+    }
+}
+
+void RestorePage::onSnapshotsLoaded()
+{
+    // 重置加载状态
+    m_isLoading = false;
+
+    // 隐藏加载提示
+    showLoadingIndicator(false);
+
+    // 获取异步加载的结果
+    QList<Models::Snapshot> snapshots = m_snapshotWatcher->result();
+
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("已加载 %1 个快照").arg(snapshots.size()));
+
+    // 显示快照列表
+    displaySnapshots(snapshots);
+}
+
+void RestorePage::displaySnapshots(const QList<Models::Snapshot>& snapshots)
+{
+    ui->snapshotComboBox->clear();
+
+    if (snapshots.isEmpty()) {
+        ui->snapshotComboBox->addItem(tr("(无快照)"), QString());
+        return;
+    }
+
+    // 填充快照下拉框（按时间倒序，最新的在前面）
+    for (int i = snapshots.size() - 1; i >= 0; --i) {
+        const Models::Snapshot& snapshot = snapshots[i];
+        QString displayText = QString("%1 - %2")
+            .arg(snapshot.time.toString("yyyy-MM-dd HH:mm:ss"))
+            .arg(snapshot.paths.isEmpty() ? tr("(无路径)") : snapshot.paths.first());
+
+        if (displayText.length() > 80) {
+            displayText = displayText.left(77) + "...";
+        }
+
+        ui->snapshotComboBox->addItem(displayText, snapshot.id);
+    }
+}
+
+void RestorePage::showLoadingIndicator(bool show)
+{
+    if (show) {
+        // 显示"加载中..."提示
+        ui->snapshotComboBox->clear();
+        ui->snapshotComboBox->addItem(tr("正在加载快照列表..."), QString());
+        ui->snapshotComboBox->setEnabled(false);
+        ui->restoreButton->setEnabled(false);
+    } else {
+        // 启用控件
+        ui->snapshotComboBox->setEnabled(true);
+        ui->restoreButton->setEnabled(true);
     }
 }
 
