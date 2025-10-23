@@ -167,22 +167,49 @@ void SnapshotPage::onRepositoryChanged(int index)
 
 void SnapshotPage::onDeleteSnapshot()
 {
-    // 获取选中的行
-    int currentRow = ui->tableWidget->currentRow();
-    if (currentRow < 0) {
-        QMessageBox::warning(this, tr("警告"), tr("请先选择一个快照"));
+    // 获取所有选中的行
+    QList<QTableWidgetItem*> selectedItems = ui->tableWidget->selectedItems();
+    if (selectedItems.isEmpty()) {
+        QMessageBox::warning(this, tr("警告"), tr("请先选择要删除的快照"));
         return;
     }
 
-    // 获取快照ID
-    QTableWidgetItem* idItem = ui->tableWidget->item(currentRow, 0);
-    QString snapshotId = idItem->data(Qt::UserRole).toString();
+    // 提取所有选中的快照ID（去重，因为每行有多列都会被选中）
+    QSet<int> selectedRows;
+    for (QTableWidgetItem* item : selectedItems) {
+        selectedRows.insert(item->row());
+    }
+
+    QStringList snapshotIds;
+    QStringList snapshotShortIds;
+    for (int row : selectedRows) {
+        QTableWidgetItem* idItem = ui->tableWidget->item(row, 0);
+        if (idItem) {
+            QString snapshotId = idItem->data(Qt::UserRole).toString();
+            snapshotIds << snapshotId;
+            snapshotShortIds << snapshotId.left(8);
+        }
+    }
+
+    if (snapshotIds.isEmpty()) {
+        QMessageBox::warning(this, tr("警告"), tr("未找到有效的快照"));
+        return;
+    }
 
     // 确认删除
+    QString confirmMsg;
+    if (snapshotIds.size() == 1) {
+        confirmMsg = tr("确定要删除快照 %1 吗？\n\n警告：此操作不可恢复！").arg(snapshotShortIds.first());
+    } else {
+        confirmMsg = tr("确定要删除选中的 %1 个快照吗？\n\n快照ID：\n%2\n\n警告：此操作不可恢复！")
+            .arg(snapshotIds.size())
+            .arg(snapshotShortIds.join(", "));
+    }
+
     QMessageBox::StandardButton reply = QMessageBox::question(
         this,
         tr("确认删除"),
-        tr("确定要删除快照 %1 吗？\n\n警告：此操作不可恢复！").arg(snapshotId.left(8)),
+        confirmMsg,
         QMessageBox::Yes | QMessageBox::No,
         QMessageBox::No
     );
@@ -213,11 +240,14 @@ void SnapshotPage::onDeleteSnapshot()
 
     // 删除快照
     Core::SnapshotManager* snapshotMgr = Core::SnapshotManager::instance();
-    QStringList snapshotIds;
-    snapshotIds << snapshotId;
     if (snapshotMgr->deleteSnapshots(m_currentRepositoryId, snapshotIds)) {
-        QMessageBox::information(this, tr("成功"),
-            tr("快照已删除。\n\n注意：实际的数据将在下次运行 prune 命令后被移除。"));
+        QString successMsg;
+        if (snapshotIds.size() == 1) {
+            successMsg = tr("快照已删除。\n\n注意：实际的数据将在下次运行 prune 命令后被移除。");
+        } else {
+            successMsg = tr("已成功删除 %1 个快照。\n\n注意：实际的数据将在下次运行 prune 命令后被移除。").arg(snapshotIds.size());
+        }
+        QMessageBox::information(this, tr("成功"), successMsg);
         loadSnapshots();
     } else {
         QMessageBox::critical(this, tr("错误"),

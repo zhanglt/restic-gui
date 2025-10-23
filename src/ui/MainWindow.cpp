@@ -393,7 +393,7 @@ void MainWindow::onRefresh()
         case 2: // 备份任务
             m_backupPage->loadTasks();
             break;
-        case 3: // 快照浏览
+        case 3: // 快照管理
             m_snapshotPage->loadSnapshots();
             break;
         case 4: // 数据恢复

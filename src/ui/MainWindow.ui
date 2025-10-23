@@ -79,7 +79,7 @@ QListWidget::item:hover {
       </item>
       <item>
        <property name="text">
-        <string>快照浏览</string>
+        <string>快照管理</string>
        </property>
       </item>
       <item>
