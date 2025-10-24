@@ -83,7 +83,8 @@ SOURCES += \
 
 # UI - 向导
 SOURCES += \
-    src/ui/wizards/CreateRepoWizard.cpp
+    src/ui/wizards/CreateRepoWizard.cpp \
+    src/ui/wizards/RestoreWizard.cpp
 
 # UI - 对话框
 SOURCES += \
@@ -131,6 +132,7 @@ HEADERS += \
     src/ui/pages/RestorePage.h \
     src/ui/pages/StatsPage.h \
     src/ui/wizards/CreateRepoWizard.h \
+    src/ui/wizards/RestoreWizard.h \
     src/ui/dialogs/ProgressDialog.h \
     src/ui/dialogs/SettingsDialog.h \
     src/ui/dialogs/CreateTaskDialog.h \

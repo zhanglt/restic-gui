@@ -32,20 +32,27 @@ private slots:
     void onRefresh();
     void onBrowse();
     void onRestore();
+    void onQuickRestore();
     void onSnapshotsUpdated(int repoId);
     void onSnapshotsLoaded();
     void onSnapshotSelected(int currentRow, int previousRow = -1);
     void onIncludeCheckBoxToggled(bool checked);
+    void onTargetPathChanged();
+    void onSearch();
+    void onFilterTextChanged(const QString& text);
 
 private:
     void displaySnapshots(const QList<Models::Snapshot>& snapshots);
     void showLoadingIndicator(bool show);
+    void updateQuickRestoreButtonState();
+    void filterSnapshots(const QString& filterText);
 
     Ui::RestorePage* ui;
     int m_currentRepositoryId;
     bool m_firstShow;
     bool m_isLoading;
     QFutureWatcher<QList<Models::Snapshot>>* m_snapshotWatcher;
+    QList<Models::Snapshot> m_allSnapshots;  // 保存所有快照，用于筛选
 };
 
 } // namespace UI

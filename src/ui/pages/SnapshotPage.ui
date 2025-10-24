@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>965</width>
     <height>600</height>
    </rect>
   </property>
@@ -30,7 +30,7 @@
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
-        <string>仓库:</string>
+        <string>仓库选择:</string>
        </property>
       </widget>
      </item>
@@ -38,6 +38,9 @@
       <widget class="QComboBox" name="repositoryComboBox">
        <property name="minimumWidth">
         <number>200</number>
+       </property>
+       <property name="maximumWidth">
+        <number>250</number>
        </property>
       </widget>
      </item>
@@ -52,9 +55,6 @@
       <widget class="QLineEdit" name="filterEdit">
        <property name="placeholderText">
         <string>搜索快照...</string>
-       </property>
-       <property name="minimumWidth">
-        <number>150</number>
        </property>
       </widget>
      </item>
@@ -122,11 +122,11 @@
      <property name="selectionBehavior">
       <enum>QAbstractItemView::SelectRows</enum>
      </property>
-     <attribute name="horizontalHeaderStretchLastSection">
-      <bool>false</bool>
-     </attribute>
      <attribute name="horizontalHeaderDefaultSectionSize">
       <number>100</number>
+     </attribute>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>false</bool>
      </attribute>
      <column>
       <property name="text">

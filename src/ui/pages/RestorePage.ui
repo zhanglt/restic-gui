@@ -30,7 +30,7 @@
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
-        <string>仓库:</string>
+        <string>仓库选择:</string>
        </property>
       </widget>
      </item>
@@ -38,6 +38,30 @@
       <widget class="QComboBox" name="repositoryComboBox">
        <property name="minimumWidth">
         <number>200</number>
+       </property>
+       <property name="maximumWidth">
+        <number>250</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_filter">
+       <property name="text">
+        <string>筛选:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="filterEdit">
+       <property name="placeholderText">
+        <string>搜索快照...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="searchButton">
+       <property name="text">
+        <string>搜索</string>
        </property>
       </widget>
      </item>
@@ -193,12 +217,22 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="restoreButton">
-          <property name="text">
-           <string>开始恢复</string>
+         <widget class="QPushButton" name="quickRestoreButton">
+          <property name="enabled">
+           <bool>false</bool>
           </property>
-          <property name="minimumWidth">
-           <number>150</number>
+          <property name="text">
+           <string>快速恢复</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="restoreButton">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="text">
+           <string>恢复向导</string>
           </property>
          </widget>
         </item>

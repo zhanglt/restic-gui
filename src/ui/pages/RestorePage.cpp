@@ -7,6 +7,7 @@
 #include "../../utils/Logger.h"
 #include "../../models/RestoreOptions.h"
 #include "../dialogs/ProgressDialog.h"
+#include "../wizards/RestoreWizard.h"
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QFileDialog>
@@ -161,11 +162,14 @@ RestorePage::RestorePage(QWidget* parent)
 
     // 应用样式到控件
     ui->repositoryComboBox->setStyleSheet(comboBoxStyle);
+    ui->filterEdit->setStyleSheet(lineEditStyle);
+    ui->searchButton->setStyleSheet(secondaryButtonStyle);
     ui->refreshButton->setStyleSheet(secondaryButtonStyle);
     ui->snapshotTable->setStyleSheet(tableStyle);
     ui->targetPathEdit->setStyleSheet(lineEditStyle);
     ui->includeEdit->setStyleSheet(lineEditStyle);
     ui->browseButton->setStyleSheet(secondaryButtonStyle);
+    ui->quickRestoreButton->setStyleSheet(primaryButtonStyle);
     ui->restoreButton->setStyleSheet(successButtonStyle);
     ui->restoreOptionsGroup->setStyleSheet(groupBoxStyle);
     ui->includeCheckBox->setStyleSheet(checkBoxStyle);
@@ -195,10 +199,14 @@ RestorePage::RestorePage(QWidget* parent)
     // 加载完成后再连接信号
     connect(ui->repositoryComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &RestorePage::onRepositoryChanged);
+    connect(ui->filterEdit, &QLineEdit::textChanged, this, &RestorePage::onFilterTextChanged);
+    connect(ui->searchButton, &QPushButton::clicked, this, &RestorePage::onSearch);
     connect(ui->refreshButton, &QPushButton::clicked, this, &RestorePage::onRefresh);
     connect(ui->browseButton, &QPushButton::clicked, this, &RestorePage::onBrowse);
+    connect(ui->quickRestoreButton, &QPushButton::clicked, this, &RestorePage::onQuickRestore);
     connect(ui->restoreButton, &QPushButton::clicked, this, &RestorePage::onRestore);
     connect(ui->includeCheckBox, &QCheckBox::toggled, this, &RestorePage::onIncludeCheckBoxToggled);
+    connect(ui->targetPathEdit, &QLineEdit::textChanged, this, &RestorePage::onTargetPathChanged);
     connect(ui->snapshotTable, &QTableWidget::currentCellChanged,
             this, [this](int currentRow, int, int previousRow, int) {
         onSnapshotSelected(currentRow, previousRow);
@@ -376,105 +384,36 @@ void RestorePage::onSnapshotSelected(int currentRow, int previousRow)
 {
     Q_UNUSED(previousRow);
 
-    if (currentRow < 0) {
-        ui->restoreButton->setEnabled(false);
-        return;
-    }
-
-    ui->restoreButton->setEnabled(true);
+    // 恢复向导按钮始终保持启用状态，因为向导内部会引导用户选择
+    // 只更新快速恢复按钮的状态
+    updateQuickRestoreButtonState();
 }
 
 void RestorePage::onRestore()
 {
-    // 1. 验证输入
-    if (m_currentRepositoryId <= 0) {
-        QMessageBox::warning(this, tr("警告"), tr("请先选择一个仓库"));
-        return;
-    }
+    // 显示恢复向导
+    RestoreWizard wizard(this);
 
-    // 从表格获取选中的快照
-    int currentRow = ui->snapshotTable->currentRow();
-    if (currentRow < 0) {
-        QMessageBox::warning(this, tr("警告"), tr("请先选择一个快照"));
-        return;
-    }
-
-    // 获取快照ID（第一列）
-    QTableWidgetItem* idItem = ui->snapshotTable->item(currentRow, 0);
-    if (!idItem) {
-        QMessageBox::warning(this, tr("警告"), tr("无法获取快照信息"));
-        return;
-    }
-    QString snapshotId = idItem->data(Qt::UserRole).toString();
-    if (snapshotId.isEmpty()) {
-        QMessageBox::warning(this, tr("警告"), tr("无效的快照ID"));
-        return;
-    }
-
+    // 如果主界面已经选择了恢复目录，预设到向导中
     QString targetPath = ui->targetPathEdit->text().trimmed();
-    if (targetPath.isEmpty()) {
-        QMessageBox::warning(this, tr("警告"), tr("请输入恢复目标路径"));
+    if (!targetPath.isEmpty()) {
+        wizard.setPresetTargetPath(targetPath);
+    }
+
+    // 如果用户取消向导，直接返回
+    if (wizard.exec() != QDialog::Accepted) {
         return;
     }
 
-    // 检查目标路径是否存在
-    QDir targetDir(targetPath);
-    if (!targetDir.exists()) {
-        QMessageBox::StandardButton reply = QMessageBox::question(
-            this,
-            tr("确认"),
-            tr("目标路径不存在，是否创建？\n%1").arg(targetPath),
-            QMessageBox::Yes | QMessageBox::No
-        );
+    // 从向导获取配置
+    int repositoryId = wizard.getRepositoryId();
+    QString snapshotId = wizard.getSnapshotId();
+    QStringList selectedPaths = wizard.getSelectedPaths();
+    Models::RestoreOptions options = wizard.getRestoreOptions();
 
-        if (reply == QMessageBox::Yes) {
-            if (!targetDir.mkpath(".")) {
-                QMessageBox::critical(this, tr("错误"), tr("无法创建目标路径"));
-                return;
-            }
-        } else {
-            return;
-        }
-    }
-
-    // 2. 准备恢复选项
-    Models::RestoreOptions options;
-    options.targetPath = targetPath;
-    options.overwritePolicy = Models::RestoreOptions::Always;
-    options.restorePermissions = true;
-    options.restoreTimestamps = true;
-    options.restoreOwnership = false;
-    options.sparse = false;
-    options.verify = false;
-
-    // 如果选中了包含特定文件/目录
-    if (ui->includeCheckBox->isChecked() && !ui->includeEdit->text().trimmed().isEmpty()) {
-        options.includePaths = ui->includeEdit->text().trimmed().split(';', Qt::SkipEmptyParts);
-    }
-
-    // 3. 确认操作
-    QString snapshotText = idItem->text();  // 快照ID显示文本
-    QTableWidgetItem* timeItem = ui->snapshotTable->item(currentRow, 1);
-    if (timeItem) {
-        snapshotText = QString("%1 (%2)").arg(snapshotText).arg(timeItem->text());
-    }
-
-    QMessageBox::StandardButton confirm = QMessageBox::question(
-        this,
-        tr("确认恢复"),
-        tr("确定要恢复以下快照吗？\n\n快照：%1\n目标路径：%2\n\n注意：目标路径中的同名文件将被覆盖！")
-            .arg(snapshotText)
-            .arg(targetPath),
-        QMessageBox::Yes | QMessageBox::No
-    );
-
-    if (confirm != QMessageBox::Yes) {
-        return;
-    }
-
-    // 4. 执行恢复
+    // 执行恢复
     Utils::Logger::instance()->log(Utils::Logger::Info,
-        QString("开始恢复快照 %1 到 %2").arg(snapshotId).arg(targetPath));
+        QString("开始恢复快照 %1 到 %2").arg(snapshotId).arg(options.targetPath));
 
     Core::RestoreManager* restoreMgr = Core::RestoreManager::instance();
 
@@ -493,15 +432,15 @@ void RestorePage::onRestore()
     });
 
     connect(restoreMgr, &Core::RestoreManager::restoreFinished,
-            this, [this, progressDialog, snapshotText, targetPath](bool success) {
+            this, [this, progressDialog, snapshotId, options](bool success) {
         progressDialog->close();
         progressDialog->deleteLater();
 
         if (success) {
             QMessageBox::information(this, tr("成功"),
                 tr("数据恢复成功！\n\n快照：%1\n目标路径：%2")
-                    .arg(snapshotText)
-                    .arg(targetPath));
+                    .arg(snapshotId.left(8))
+                    .arg(options.targetPath));
 
             Utils::Logger::instance()->log(Utils::Logger::Info, "数据恢复成功");
         } else {
@@ -522,7 +461,7 @@ void RestorePage::onRestore()
     });
 
     // 开始恢复
-    bool started = restoreMgr->restore(m_currentRepositoryId, snapshotId, options);
+    bool started = restoreMgr->restore(repositoryId, snapshotId, options);
 
     if (started) {
         progressDialog->show();
@@ -546,8 +485,17 @@ void RestorePage::onSnapshotsLoaded()
     Utils::Logger::instance()->log(Utils::Logger::Info,
         QString("已加载 %1 个快照").arg(snapshots.size()));
 
-    // 显示快照列表
-    displaySnapshots(snapshots);
+    // 保存所有快照用于筛选
+    m_allSnapshots = snapshots;
+
+    // 应用当前筛选条件
+    QString filterText = ui->filterEdit->text().trimmed();
+    if (!filterText.isEmpty()) {
+        filterSnapshots(filterText);
+    } else {
+        // 显示快照列表
+        displaySnapshots(snapshots);
+    }
 }
 
 void RestorePage::displaySnapshots(const QList<Models::Snapshot>& snapshots)
@@ -625,12 +573,239 @@ void RestorePage::showLoadingIndicator(bool show)
         ui->snapshotTable->setRowCount(0);
         ui->snapshotTable->setEnabled(false);
         ui->restoreButton->setEnabled(false);
+        ui->quickRestoreButton->setEnabled(false);
         ui->refreshButton->setEnabled(false);
     } else {
         // 启用控件
         ui->snapshotTable->setEnabled(true);
         ui->refreshButton->setEnabled(true);
-        // restoreButton会在选中快照时启用
+        ui->restoreButton->setEnabled(true);  // 恢复向导始终启用
+        // quickRestoreButton会在选中快照且填写路径时启用
+    }
+}
+
+void RestorePage::onTargetPathChanged()
+{
+    updateQuickRestoreButtonState();
+}
+
+void RestorePage::updateQuickRestoreButtonState()
+{
+    // 只有在选中快照且填写了恢复目录时才启用快速恢复按钮
+    bool hasSnapshot = ui->snapshotTable->currentRow() >= 0;
+    bool hasTargetPath = !ui->targetPathEdit->text().isEmpty();
+
+    ui->quickRestoreButton->setEnabled(hasSnapshot && hasTargetPath);
+}
+
+void RestorePage::onSearch()
+{
+    QString filterText = ui->filterEdit->text().trimmed();
+    filterSnapshots(filterText);
+}
+
+void RestorePage::onFilterTextChanged(const QString& text)
+{
+    // 实时筛选（可选，如果不需要实时筛选，可以只在点击搜索按钮时筛选）
+    Q_UNUSED(text);
+    // 不做实时筛选，用户需要点击搜索按钮
+}
+
+void RestorePage::filterSnapshots(const QString& filterText)
+{
+    if (filterText.isEmpty()) {
+        // 如果筛选文本为空，显示所有快照
+        displaySnapshots(m_allSnapshots);
+        return;
+    }
+
+    // 筛选快照
+    QList<Models::Snapshot> filteredSnapshots;
+    QString lowerFilter = filterText.toLower();
+
+    for (const Models::Snapshot& snapshot : m_allSnapshots) {
+        // 在多个字段中搜索
+        bool matches = false;
+
+        // 搜索快照ID
+        if (snapshot.id.toLower().contains(lowerFilter)) {
+            matches = true;
+        }
+
+        // 搜索主机名
+        if (!matches && snapshot.hostname.toLower().contains(lowerFilter)) {
+            matches = true;
+        }
+
+        // 搜索路径
+        if (!matches) {
+            for (const QString& path : snapshot.paths) {
+                if (path.toLower().contains(lowerFilter)) {
+                    matches = true;
+                    break;
+                }
+            }
+        }
+
+        // 搜索标签
+        if (!matches) {
+            for (const QString& tag : snapshot.tags) {
+                if (tag.toLower().contains(lowerFilter)) {
+                    matches = true;
+                    break;
+                }
+            }
+        }
+
+        if (matches) {
+            filteredSnapshots.append(snapshot);
+        }
+    }
+
+    // 显示筛选后的快照
+    displaySnapshots(filteredSnapshots);
+
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("筛选结果: %1 / %2 个快照")
+            .arg(filteredSnapshots.size())
+            .arg(m_allSnapshots.size()));
+}
+
+void RestorePage::onQuickRestore()
+{
+    // 获取选中的快照
+    int currentRow = ui->snapshotTable->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, tr("警告"), tr("请先选择要恢复的快照"));
+        return;
+    }
+
+    // 获取快照ID
+    QTableWidgetItem* idItem = ui->snapshotTable->item(currentRow, 0);
+    if (!idItem) {
+        QMessageBox::warning(this, tr("警告"), tr("无法获取快照信息"));
+        return;
+    }
+    QString snapshotId = idItem->data(Qt::UserRole).toString();
+
+    // 获取恢复目标路径
+    QString targetPath = ui->targetPathEdit->text().trimmed();
+    if (targetPath.isEmpty()) {
+        QMessageBox::warning(this, tr("警告"), tr("请先选择恢复目标路径"));
+        return;
+    }
+
+    // 检查目标路径是否存在
+    if (!QDir(targetPath).exists()) {
+        QMessageBox::warning(this, tr("警告"),
+            tr("目标路径不存在：%1").arg(targetPath));
+        return;
+    }
+
+    // 获取快照时间（用于显示）
+    QTableWidgetItem* timeItem = ui->snapshotTable->item(currentRow, 1);
+    QString snapshotTime = timeItem ? timeItem->text() : tr("未知");
+
+    // 构建确认消息
+    QString confirmMessage = tr("确认执行快速恢复？\n\n"
+                               "快照ID: %1\n"
+                               "创建时间: %2\n"
+                               "恢复到: %3")
+                               .arg(snapshotId.left(8))
+                               .arg(snapshotTime)
+                               .arg(targetPath);
+
+    // 如果勾选了包含特定文件/目录，添加到确认消息中
+    if (ui->includeCheckBox->isChecked() && !ui->includeEdit->text().isEmpty()) {
+        confirmMessage += tr("\n包含路径: %1").arg(ui->includeEdit->text());
+    }
+
+    confirmMessage += tr("\n\n此操作将恢复整个快照的所有文件到指定目录。");
+
+    // 弹出确认对话框
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("确认恢复"),
+        confirmMessage,
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No
+    );
+
+    if (reply != QMessageBox::Yes) {
+        return;
+    }
+
+    // 创建恢复选项
+    Models::RestoreOptions options;
+    options.targetPath = targetPath;
+    options.verify = false;  // 快速恢复默认不验证数据
+    options.overwritePolicy = Models::RestoreOptions::Always;  // 允许覆盖现有文件
+
+    // 如果勾选了包含特定文件/目录
+    if (ui->includeCheckBox->isChecked() && !ui->includeEdit->text().isEmpty()) {
+        QString includePath = ui->includeEdit->text().trimmed();
+        if (!includePath.isEmpty()) {
+            options.includePaths = QStringList() << includePath;
+        }
+    }
+
+    // 执行恢复
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("开始快速恢复快照 %1 到 %2").arg(snapshotId).arg(targetPath));
+
+    Core::RestoreManager* restoreMgr = Core::RestoreManager::instance();
+
+    // 创建进度对话框
+    ProgressDialog* progressDialog = new ProgressDialog(this);
+    progressDialog->setTitle(tr("快速恢复进度"));
+    progressDialog->setMessage(tr("正在恢复数据..."));
+    progressDialog->setProgress(0);
+
+    // 连接信号
+    connect(restoreMgr, &Core::RestoreManager::restoreProgress,
+            progressDialog, [progressDialog](int percent, const QString& message) {
+        progressDialog->setProgress(percent);
+        progressDialog->setMessage(message);
+        progressDialog->appendLog(message);
+    });
+
+    connect(restoreMgr, &Core::RestoreManager::restoreFinished,
+            this, [this, progressDialog, snapshotId, targetPath](bool success) {
+        progressDialog->close();
+        progressDialog->deleteLater();
+
+        if (success) {
+            QMessageBox::information(this, tr("成功"),
+                tr("快速恢复成功！\n\n快照：%1\n目标路径：%2")
+                    .arg(snapshotId.left(8))
+                    .arg(targetPath));
+
+            Utils::Logger::instance()->log(Utils::Logger::Info, "快速恢复成功");
+        } else {
+            QMessageBox::critical(this, tr("失败"),
+                tr("快速恢复失败，请查看日志了解详情"));
+
+            Utils::Logger::instance()->log(Utils::Logger::Error, "快速恢复失败");
+        }
+    });
+
+    connect(restoreMgr, &Core::RestoreManager::restoreError,
+            this, [progressDialog](const QString& error) {
+        progressDialog->close();
+        progressDialog->deleteLater();
+
+        QMessageBox::critical(nullptr, QObject::tr("错误"),
+            QObject::tr("恢复失败：%1").arg(error));
+    });
+
+    // 开始恢复
+    bool started = restoreMgr->restore(m_currentRepositoryId, snapshotId, options);
+
+    if (started) {
+        progressDialog->show();
+    } else {
+        progressDialog->deleteLater();
+        QMessageBox::critical(this, tr("错误"), tr("无法启动恢复操作"));
     }
 }
 
