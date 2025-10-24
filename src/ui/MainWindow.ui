@@ -49,7 +49,7 @@
     background-color: #2c3e50;
     color: white;
     border: none;
-    font-size: 14px;
+    font-size: 16px;
 }
 QListWidget::item {
     padding: 12px;
@@ -119,21 +119,9 @@ QListWidget::item:hover {
     <addaction name="actionNewRepository"/>
     <addaction name="actionOpenRepository"/>
     <addaction name="separator"/>
-    <addaction name="actionExit"/>
-   </widget>
-   <widget class="QMenu" name="menuEdit">
-    <property name="title">
-     <string>编辑(&amp;E)</string>
-    </property>
     <addaction name="actionSettings"/>
-   </widget>
-   <widget class="QMenu" name="menuTools">
-    <property name="title">
-     <string>工具(&amp;T)</string>
-    </property>
-    <addaction name="actionCheckRepository"/>
-    <addaction name="actionUnlockRepository"/>
-    <addaction name="actionPruneRepository"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -143,8 +131,6 @@ QListWidget::item:hover {
     <addaction name="actionAbout"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuEdit"/>
-   <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>

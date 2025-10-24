@@ -42,15 +42,10 @@ private slots:
     // 文件菜单
     void onNewRepository();
     void onOpenRepository();
-
-    // 工具菜单
-    void onCheckRepository();
-    void onUnlockRepository();
-    void onPruneRepository();
+    void showSettingsDialog();
 
     // 帮助菜单
     void showDocumentation();
-    void showSettingsDialog();
     void showAboutDialog();
 
     // 工具栏

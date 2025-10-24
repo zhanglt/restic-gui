@@ -90,15 +90,8 @@ void MainWindow::setupConnections()
     // 文件菜单
     connect(ui->actionNewRepository, &QAction::triggered, this, &MainWindow::onNewRepository);
     connect(ui->actionOpenRepository, &QAction::triggered, this, &MainWindow::onOpenRepository);
-    connect(ui->actionExit, &QAction::triggered, this, &MainWindow::close);
-
-    // 编辑菜单
     connect(ui->actionSettings, &QAction::triggered, this, &MainWindow::showSettingsDialog);
-
-    // 工具菜单
-    connect(ui->actionCheckRepository, &QAction::triggered, this, &MainWindow::onCheckRepository);
-    connect(ui->actionUnlockRepository, &QAction::triggered, this, &MainWindow::onUnlockRepository);
-    connect(ui->actionPruneRepository, &QAction::triggered, this, &MainWindow::onPruneRepository);
+    connect(ui->actionExit, &QAction::triggered, this, &MainWindow::close);
 
     // 帮助菜单
     connect(ui->actionDocumentation, &QAction::triggered, this, &MainWindow::showDocumentation);
@@ -273,75 +266,6 @@ void MainWindow::onOpenRepository()
 
     // 切换到仓库管理页面
     ui->navigationList->setCurrentRow(1);
-}
-
-// 工具菜单槽函数
-void MainWindow::onCheckRepository()
-{
-    Utils::Logger::instance()->log(Utils::Logger::Info, "检查仓库");
-
-    // 获取当前选中的仓库
-    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
-    Models::Repository repo = repoMgr->getDefaultRepository();
-
-    if (repo.id <= 0) {
-        QMessageBox::warning(this, tr("警告"),
-            tr("请先选择一个仓库！"));
-        return;
-    }
-
-    QMessageBox::information(this, tr("检查仓库"),
-        tr("正在检查仓库 \"%1\"...\n此功能即将实现。").arg(repo.name));
-}
-
-void MainWindow::onUnlockRepository()
-{
-    Utils::Logger::instance()->log(Utils::Logger::Info, "解锁仓库");
-
-    // 获取当前选中的仓库
-    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
-    Models::Repository repo = repoMgr->getDefaultRepository();
-
-    if (repo.id <= 0) {
-        QMessageBox::warning(this, tr("警告"),
-            tr("请先选择一个仓库！"));
-        return;
-    }
-
-    int ret = QMessageBox::question(this, tr("确认解锁"),
-        tr("确定要解锁仓库 \"%1\" 吗？\n这将删除该仓库的锁文件。").arg(repo.name),
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::No);
-
-    if (ret == QMessageBox::Yes) {
-        QMessageBox::information(this, tr("解锁仓库"),
-            tr("仓库解锁功能即将实现。"));
-    }
-}
-
-void MainWindow::onPruneRepository()
-{
-    Utils::Logger::instance()->log(Utils::Logger::Info, "维护仓库");
-
-    // 获取当前选中的仓库
-    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
-    Models::Repository repo = repoMgr->getDefaultRepository();
-
-    if (repo.id <= 0) {
-        QMessageBox::warning(this, tr("警告"),
-            tr("请先选择一个仓库！"));
-        return;
-    }
-
-    int ret = QMessageBox::question(this, tr("确认维护"),
-        tr("确定要维护仓库 \"%1\" 吗？\n这将执行 prune 操作，删除不再需要的数据。").arg(repo.name),
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::No);
-
-    if (ret == QMessageBox::Yes) {
-        QMessageBox::information(this, tr("维护仓库"),
-            tr("仓库维护功能即将实现。"));
-    }
 }
 
 // 帮助菜单槽函数
