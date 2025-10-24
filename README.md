@@ -36,12 +36,20 @@ Restic GUI 是一个基于 Qt 5.14 开发的跨平台图形化界面程序，为
 - 各种后端配置
 - 常见问题解答
 
+## 项目状态
+
+**当前版本：** v1.1
+**开发状态：** ✅ 核心功能已全部实现，项目可编译运行
+**代码规模：** 75个文件，约11,300行代码
+**最后更新：** 2025-10-24
+
 ## 技术栈
 
 - **开发框架：** Qt 5.14
 - **编程语言：** C++ 17
 - **数据库：** SQLite 3
-- **构建工具：** CMake 或 qmake
+- **构建工具：** qmake（项目使用qmake，不使用CMake）
+- **UI设计：** Qt Designer .ui 文件（10个）+ 纯代码（向导和自定义控件）
 - **依赖工具：** restic (需单独安装)
 
 ## 系统架构
@@ -124,31 +132,40 @@ Restic GUI 采用三层架构：
 
 ### 构建项目
 
+**使用 qmake（推荐）：**
+
 ```bash
-# 克隆仓库
-git clone https://github.com/yourname/restic-gui.git
-cd restic-gui
+# Windows (cmd)
+qmake restic-gui.pro
+nmake          # MSVC编译器
+# 或 mingw32-make  # MinGW编译器
 
-# 使用 CMake 构建
-mkdir build
-cd build
-cmake ..
-make
-
-# 或使用 qmake
-qmake ../restic-gui.pro
+# Linux/macOS
+qmake restic-gui.pro
 make
 ```
+
+**或使用 Qt Creator（Windows 推荐）：**
+1. 打开 `restic-gui.pro` 文件
+2. 配置项目（选择 MSVC 或 MinGW kit）
+3. 点击构建（Ctrl+B）
+4. 运行（Ctrl+R）
 
 ### 运行程序
 
+构建成功后，可执行文件位于：
+- Windows: `bin/restic-gui.exe`
+- Linux/macOS: `bin/restic-gui`
+
 ```bash
-./restic-gui
+# Windows
+bin\restic-gui.exe
+
+# Linux/macOS
+./bin/restic-gui
 ```
 
-## 开发计划
-
-本项目采用迭代开发模式，分阶段实现：
+## 已实现功能
 
 ### ✅ 第一阶段：需求分析与设计（已完成）
 - [x] 需求规格说明书
@@ -157,27 +174,36 @@ make
 - [x] 数据库设计文档
 - [x] 界面原型设计
 
-### 🚧 第二阶段：项目框架搭建（进行中）
-- [ ] 创建 Qt 项目结构
-- [ ] 配置构建系统（CMake/qmake）
-- [ ] 创建基础类框架
-- [ ] 设置资源文件和翻译
+### ✅ 第二阶段：项目框架搭建（已完成）
+- [x] 创建 Qt 项目结构
+- [x] 配置构建系统（qmake）
+- [x] 创建基础类框架
+- [x] 设置资源文件和翻译
+- [x] UI 转换为 Qt Designer .ui 文件
 
-### 📅 第三阶段：核心功能开发（计划中）
-- [ ] 仓库管理模块
-- [ ] 备份功能模块
-- [ ] 恢复功能模块
-- [ ] 快照管理模块
-- [ ] 定时备份模块
-- [ ] 统计信息模块
+### ✅ 第三阶段：核心功能开发（已完成）
+- [x] 仓库管理模块（RepositoryManager）
+- [x] 备份功能模块（BackupManager）
+- [x] 恢复功能模块（RestoreManager）
+- [x] 快照管理模块（SnapshotManager）
+- [x] 定时备份模块（SchedulerManager）
+- [x] ResticWrapper（restic CLI 完整封装）
+- [x] 数据访问层（DatabaseManager、ConfigManager、PasswordManager、CacheManager）
+- [x] 工具类（Logger、CryptoUtil、FileSystemUtil、NetworkUtil）
+- [x] 数据模型（8个结构体）
+- [x] 主窗口和6个页面（全部使用.ui文件）
+- [x] 对话框（ProgressDialog、SettingsDialog、PruneOptionsDialog等）
+- [x] 向导（CreateRepoWizard，5步向导）
+- [x] 自定义控件（FileTreeWidget、SnapshotListWidget）
 
-### 📅 第四阶段：测试与优化
+### 📅 第四阶段：测试与优化（待完善）
 - [ ] 单元测试
 - [ ] 集成测试
 - [ ] 性能优化
 - [ ] Bug 修复
+- [ ] 用户体验优化
 
-### 📅 第五阶段：发布
+### 📅 第五阶段：发布（计划中）
 - [ ] 打包安装程序
 - [ ] 编写用户手册
 - [ ] 发布 v1.0
@@ -187,28 +213,50 @@ make
 ```
 restic-gui/
 ├── docs/                       # 设计文档
-│   ├── 需求规格说明书.md
-│   ├── 概要设计文档.md
-│   ├── 详细设计文档.md
-│   ├── 数据库设计文档.md
-│   └── 界面原型设计文档.md
+│   ├── 需求规格说明书.md (v1.1)
+│   ├── 概要设计文档.md (v1.1)
+│   ├── 详细设计文档.md (v1.1)
+│   ├── 数据库设计文档.md (v1.1)
+│   └── 界面原型设计文档.md (v1.1)
 ├── restic_doc/                 # restic官方文档
-├── src/                        # 源代码（待开发）
-│   ├── main.cpp
-│   ├── core/                   # 核心业务逻辑
+├── src/                        # 源代码（75个文件，~11,300行）
+│   ├── main.cpp                # 程序入口
+│   ├── core/                   # 核心业务逻辑（6个管理器）
+│   │   ├── ResticWrapper.h/cpp
+│   │   ├── RepositoryManager.h/cpp
+│   │   ├── BackupManager.h/cpp
+│   │   ├── RestoreManager.h/cpp
+│   │   ├── SnapshotManager.h/cpp
+│   │   └── SchedulerManager.h/cpp
 │   ├── ui/                     # 界面层
-│   ├── models/                 # 数据模型
-│   ├── data/                   # 数据访问层
-│   └── utils/                  # 工具类
-├── resources/                  # 资源文件（待创建）
-│   ├── icons/
-│   ├── translations/
-│   └── styles/
-├── tests/                      # 测试代码（待开发）
-├── CMakeLists.txt              # CMake配置（待创建）
-├── restic-gui.pro              # qmake配置（待创建）
+│   │   ├── MainWindow.h/cpp/.ui
+│   │   ├── pages/              # 6个页面（.ui文件）
+│   │   ├── wizards/            # 向导（纯代码）
+│   │   ├── dialogs/            # 对话框（.ui文件为主）
+│   │   └── widgets/            # 自定义控件（纯代码）
+│   ├── models/                 # 数据模型（8个结构体）
+│   ├── data/                   # 数据访问层（4个管理器）
+│   └── utils/                  # 工具类（4个工具类）
+├── resources/                  # 资源文件
+│   ├── restic-gui.qrc          # 资源清单
+│   ├── icons/                  # 图标
+│   ├── sql/                    # 数据库脚本
+│   ├── styles/                 # 样式表
+│   └── translations/           # 翻译文件
+├── build/                      # 构建输出（自动生成）
+│   ├── obj/, moc/, ui/, rcc/
+├── bin/                        # 可执行文件输出
+│   └── restic-gui.exe
+├── restic-gui.pro              # qmake配置文件
+├── CLAUDE.md                   # Claude项目指导
+├── UI_CONVERSION_COMPLETE.md   # UI转换完成报告
 └── README.md                   # 本文件
 ```
+
+**详细文件统计：**
+- 头文件 (.h)：36 个
+- 实现文件 (.cpp)：29 个
+- UI文件 (.ui)：10 个
 
 ## 贡献指南
 
@@ -250,7 +298,8 @@ Restic 采用 BSD 2-Clause 许可证
 
 ---
 
-**开发状态：** 🚧 设计阶段完成，开发进行中
+**开发状态：** ✅ 核心功能已全部实现，项目可编译运行
 
-**最后更新：** 2025-10-20
-"# restic-gui" 
+**版本：** v1.1
+
+**最后更新：** 2025-10-24 
