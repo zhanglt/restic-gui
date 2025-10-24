@@ -23,6 +23,9 @@
      <property name="text">
       <string>欢迎使用 Restic GUI</string>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
     </widget>
    </item>
    <item>

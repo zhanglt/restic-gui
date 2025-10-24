@@ -126,7 +126,7 @@ RepositoryPage::RepositoryPage(QWidget* parent)
                          "QHeaderView::section { "
                          "background-color: #f8f9fa; "
                          "color: #495057; "
-                         "padding: 10px; "
+                         "padding: 5px; "
                          "border: none; "
                          "border-right: 1px solid #dee2e6; "
                          "border-bottom: 2px solid #dee2e6; "
