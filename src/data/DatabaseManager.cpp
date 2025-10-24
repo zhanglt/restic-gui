@@ -873,7 +873,64 @@ QList<Models::BackupResult> DatabaseManager::getBackupHistory(int taskId, int li
         result.snapshotId = query.value("snapshot_id").toString();
         result.startTime = QDateTime::fromString(query.value("start_time").toString(), Qt::ISODate);
         result.endTime = QDateTime::fromString(query.value("end_time").toString(), Qt::ISODate);
+
+        // 从数据库读取 success 和 status
+        result.success = query.value("success").toInt() != 0;
         result.status = static_cast<Models::BackupStatus>(query.value("status").toInt());
+
+        result.filesNew = query.value("files_new").toULongLong();
+        result.filesChanged = query.value("files_changed").toULongLong();
+        result.filesUnmodified = query.value("files_unmodified").toULongLong();
+        result.dirsNew = query.value("dirs_new").toULongLong();
+        result.dirsChanged = query.value("dirs_changed").toULongLong();
+        result.dirsUnmodified = query.value("dirs_unmodified").toULongLong();
+        result.dataAdded = query.value("data_added").toULongLong();
+        result.totalFiles = query.value("total_files").toULongLong();
+        result.totalBytes = query.value("total_bytes").toULongLong();
+        result.errorMessage = query.value("error_message").toString();
+
+        results.append(result);
+    }
+
+    return results;
+}
+
+QList<Models::BackupResult> DatabaseManager::getRecentBackupHistory(int limit)
+{
+    QMutexLocker locker(&m_mutex);
+
+    QList<Models::BackupResult> results;
+    QSqlQuery query(m_database);
+
+    // 联接 backup_tasks 表获取任务名称
+    query.prepare(
+        "SELECT h.*, t.name as task_name "
+        "FROM backup_history h "
+        "LEFT JOIN backup_tasks t ON h.task_id = t.id "
+        "ORDER BY h.start_time DESC "
+        "LIMIT :limit"
+    );
+    query.bindValue(":limit", limit);
+
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        Utils::Logger::instance()->log(Utils::Logger::Error,
+            QString("获取最近备份历史失败: %1").arg(m_lastError));
+        return results;
+    }
+
+    while (query.next()) {
+        Models::BackupResult result;
+        result.taskId = query.value("task_id").toInt();
+        result.taskName = query.value("task_name").toString();
+        result.snapshotId = query.value("snapshot_id").toString();
+        result.startTime = QDateTime::fromString(query.value("start_time").toString(), Qt::ISODate);
+        result.endTime = QDateTime::fromString(query.value("end_time").toString(), Qt::ISODate);
+
+        // 从数据库读取 success 和 status
+        result.success = query.value("success").toInt() != 0;
+        result.status = static_cast<Models::BackupStatus>(query.value("status").toInt());
+
         result.filesNew = query.value("files_new").toULongLong();
         result.filesChanged = query.value("files_changed").toULongLong();
         result.filesUnmodified = query.value("files_unmodified").toULongLong();

@@ -63,15 +63,22 @@ CREATE TABLE IF NOT EXISTS backup_history (
     start_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
     success INTEGER NOT NULL,
+    status INTEGER DEFAULT 1,
     files_new INTEGER DEFAULT 0,
     files_changed INTEGER DEFAULT 0,
     files_unmodified INTEGER DEFAULT 0,
+    dirs_new INTEGER DEFAULT 0,
+    dirs_changed INTEGER DEFAULT 0,
+    dirs_unmodified INTEGER DEFAULT 0,
     data_added INTEGER DEFAULT 0,
     data_processed INTEGER DEFAULT 0,
+    total_files INTEGER DEFAULT 0,
+    total_bytes INTEGER DEFAULT 0,
     duration INTEGER DEFAULT 0,
     error_message TEXT,
     FOREIGN KEY (task_id) REFERENCES backup_tasks(id) ON DELETE CASCADE,
-    CHECK (success IN (0, 1))
+    CHECK (success IN (0, 1)),
+    CHECK (status BETWEEN 0 AND 3)
 );
 
 CREATE INDEX IF NOT EXISTS idx_backup_history_task ON backup_history(task_id);

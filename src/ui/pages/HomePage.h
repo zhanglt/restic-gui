@@ -18,8 +18,17 @@ public:
     explicit HomePage(QWidget* parent = nullptr);
     ~HomePage();
 
+signals:
+    void navigateToPage(int pageIndex);
+
+private slots:
+    void onCreateRepository();
+    void onCreateTask();
+    void onRestoreData();
+
 private:
     void loadDashboardData();
+    void loadRecentActivities();
 
     Ui::HomePage* ui;
 };

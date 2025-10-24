@@ -87,6 +87,11 @@ void MainWindow::setupConnections()
     connect(ui->navigationList, &QListWidget::currentRowChanged,
             this, &MainWindow::onNavigationChanged);
 
+    // 首页导航信号
+    connect(m_homePage, &HomePage::navigateToPage, [this](int pageIndex) {
+        ui->navigationList->setCurrentRow(pageIndex);
+    });
+
     // 文件菜单
     connect(ui->actionNewRepository, &QAction::triggered, this, &MainWindow::onNewRepository);
     connect(ui->actionOpenRepository, &QAction::triggered, this, &MainWindow::onOpenRepository);

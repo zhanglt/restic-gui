@@ -18,6 +18,7 @@ enum class BackupStatus
 struct BackupResult
 {
     int taskId = -1;
+    QString taskName; // 任务名称(用于显示)
     bool success = false;
     BackupStatus status = BackupStatus::Running;
     QString snapshotId;

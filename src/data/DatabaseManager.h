@@ -144,6 +144,13 @@ public:
      */
     QList<Models::BackupResult> getBackupHistory(int taskId, int limit = 100);
 
+    /**
+     * @brief 获取最近的备份历史记录(所有任务)
+     * @param limit 返回的最大记录数
+     * @return 备份历史列表,按时间倒序排列
+     */
+    QList<Models::BackupResult> getRecentBackupHistory(int limit = 10);
+
     // ========== 快照缓存表操作 ==========
 
     /**
