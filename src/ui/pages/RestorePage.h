@@ -29,10 +29,13 @@ protected:
 private slots:
     void onRepositoryChanged(int index);
     void loadSnapshots();
+    void onRefresh();
     void onBrowse();
     void onRestore();
     void onSnapshotsUpdated(int repoId);
     void onSnapshotsLoaded();
+    void onSnapshotSelected(int currentRow, int previousRow = -1);
+    void onIncludeCheckBoxToggled(bool checked);
 
 private:
     void displaySnapshots(const QList<Models::Snapshot>& snapshots);

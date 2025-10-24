@@ -26,6 +26,164 @@ RestorePage::RestorePage(QWidget* parent)
 {
     ui->setupUi(this);
 
+    // 应用样式
+    QString primaryButtonStyle =
+        "QPushButton {"
+        "    background-color: #007bff;"
+        "    color: white;"
+        "    border: 1px solid #007bff;"
+        "    padding: 6px 12px;"
+        "    border-radius: 4px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #0056b3;"
+        "    border-color: #004085;"
+        "}"
+        "QPushButton:disabled {"
+        "    background-color: #6c757d;"
+        "    border-color: #6c757d;"
+        "}";
+
+    QString secondaryButtonStyle =
+        "QPushButton {"
+        "    background-color: #6c757d;"
+        "    color: white;"
+        "    border: 1px solid #6c757d;"
+        "    padding: 6px 12px;"
+        "    border-radius: 4px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #5a6268;"
+        "    border-color: #545b62;"
+        "}"
+        "QPushButton:disabled {"
+        "    background-color: #c6c8ca;"
+        "    border-color: #c6c8ca;"
+        "}";
+
+    QString successButtonStyle =
+        "QPushButton {"
+        "    background-color: #28a745;"
+        "    color: white;"
+        "    border: 1px solid #28a745;"
+        "    padding: 6px 12px;"
+        "    border-radius: 4px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #218838;"
+        "    border-color: #1e7e34;"
+        "}"
+        "QPushButton:disabled {"
+        "    background-color: #6c757d;"
+        "    border-color: #6c757d;"
+        "}";
+
+    QString comboBoxStyle =
+        "QComboBox {"
+        "    border: 1px solid #ced4da;"
+        "    border-radius: 4px;"
+        "    padding: 5px;"
+        "    background-color: white;"
+        "}"
+        "QComboBox:hover {"
+        "    border-color: #80bdff;"
+        "}"
+        "QComboBox::drop-down {"
+        "    border: none;"
+        "}"
+        "QComboBox::down-arrow {"
+        "    image: url(:/icons/down-arrow.png);"
+        "}";
+
+    QString lineEditStyle =
+        "QLineEdit {"
+        "    border: 1px solid #ced4da;"
+        "    border-radius: 4px;"
+        "    padding: 5px;"
+        "    background-color: white;"
+        "}"
+        "QLineEdit:focus {"
+        "    border-color: #80bdff;"
+        "    outline: none;"
+        "}"
+        "QLineEdit:disabled {"
+        "    background-color: #e9ecef;"
+        "    color: #6c757d;"
+        "}";
+
+    QString tableStyle =
+        "QTableWidget {"
+        "    border: 1px solid #dee2e6;"
+        "    border-radius: 4px;"
+        "    background-color: white;"
+        "    gridline-color: #dee2e6;"
+        "}"
+        "QTableWidget::item {"
+        "    padding: 5px;"
+        "}"
+        "QTableWidget::item:selected {"
+        "    background-color: #007bff;"
+        "    color: white;"
+        "}";
+
+    QString groupBoxStyle =
+        "QGroupBox {"
+        "    border: 1px solid #dee2e6;"
+        "    border-radius: 4px;"
+        "    margin-top: 10px;"
+        "    font-weight: bold;"
+        "    padding-top: 10px;"
+        "}"
+        "QGroupBox::title {"
+        "    subcontrol-origin: margin;"
+        "    left: 10px;"
+        "    padding: 0 5px;"
+        "}";
+
+    QString checkBoxStyle =
+        "QCheckBox {"
+        "    spacing: 5px;"
+        "}"
+        "QCheckBox::indicator {"
+        "    width: 18px;"
+        "    height: 18px;"
+        "    border: 1px solid #ced4da;"
+        "    border-radius: 3px;"
+        "    background-color: white;"
+        "}"
+        "QCheckBox::indicator:checked {"
+        "    background-color: #007bff;"
+        "    border-color: #007bff;"
+        "}"
+        "QCheckBox::indicator:hover {"
+        "    border-color: #80bdff;"
+        "}";
+
+    // 应用样式到控件
+    ui->repositoryComboBox->setStyleSheet(comboBoxStyle);
+    ui->refreshButton->setStyleSheet(secondaryButtonStyle);
+    ui->snapshotTable->setStyleSheet(tableStyle);
+    ui->targetPathEdit->setStyleSheet(lineEditStyle);
+    ui->includeEdit->setStyleSheet(lineEditStyle);
+    ui->browseButton->setStyleSheet(secondaryButtonStyle);
+    ui->restoreButton->setStyleSheet(successButtonStyle);
+    ui->restoreOptionsGroup->setStyleSheet(groupBoxStyle);
+    ui->includeCheckBox->setStyleSheet(checkBoxStyle);
+
+    // 配置快照表格
+    ui->snapshotTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->snapshotTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->snapshotTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->snapshotTable->setAlternatingRowColors(true);
+    ui->snapshotTable->horizontalHeader()->setStretchLastSection(true);
+
+    // 设置列宽
+    ui->snapshotTable->setColumnWidth(0, 150);  // 快照ID
+    ui->snapshotTable->setColumnWidth(1, 150);  // 创建时间
+    ui->snapshotTable->setColumnWidth(2, 120);  // 主机名
+    ui->snapshotTable->setColumnWidth(3, 200);  // 路径
+    ui->snapshotTable->setColumnWidth(4, 100);  // 大小
+
     // 初始化异步加载器
     m_snapshotWatcher = new QFutureWatcher<QList<Models::Snapshot>>(this);
     connect(m_snapshotWatcher, &QFutureWatcher<QList<Models::Snapshot>>::finished,
@@ -37,8 +195,14 @@ RestorePage::RestorePage(QWidget* parent)
     // 加载完成后再连接信号
     connect(ui->repositoryComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &RestorePage::onRepositoryChanged);
+    connect(ui->refreshButton, &QPushButton::clicked, this, &RestorePage::onRefresh);
     connect(ui->browseButton, &QPushButton::clicked, this, &RestorePage::onBrowse);
     connect(ui->restoreButton, &QPushButton::clicked, this, &RestorePage::onRestore);
+    connect(ui->includeCheckBox, &QCheckBox::toggled, this, &RestorePage::onIncludeCheckBoxToggled);
+    connect(ui->snapshotTable, &QTableWidget::currentCellChanged,
+            this, [this](int currentRow, int, int previousRow, int) {
+        onSnapshotSelected(currentRow, previousRow);
+    });
 
     // 监听快照更新信号
     Core::SnapshotManager* snapshotMgr = Core::SnapshotManager::instance();
@@ -116,8 +280,7 @@ void RestorePage::onRepositoryChanged(int index)
 void RestorePage::loadSnapshots()
 {
     if (m_currentRepositoryId <= 0) {
-        ui->snapshotComboBox->clear();
-        ui->snapshotComboBox->addItem(tr("(无快照)"), QString());
+        ui->snapshotTable->setRowCount(0);
         return;
     }
 
@@ -141,8 +304,7 @@ void RestorePage::loadSnapshots()
             QLineEdit::Password, QString(), &ok);
 
         if (!ok || password.isEmpty()) {
-            ui->snapshotComboBox->clear();
-            ui->snapshotComboBox->addItem(tr("(需要密码)"), QString());
+            ui->snapshotTable->setRowCount(0);
             return;
         }
 
@@ -197,6 +359,31 @@ void RestorePage::onSnapshotsUpdated(int repoId)
     }
 }
 
+void RestorePage::onRefresh()
+{
+    loadSnapshots();
+}
+
+void RestorePage::onIncludeCheckBoxToggled(bool checked)
+{
+    ui->includeEdit->setEnabled(checked);
+    if (!checked) {
+        ui->includeEdit->clear();
+    }
+}
+
+void RestorePage::onSnapshotSelected(int currentRow, int previousRow)
+{
+    Q_UNUSED(previousRow);
+
+    if (currentRow < 0) {
+        ui->restoreButton->setEnabled(false);
+        return;
+    }
+
+    ui->restoreButton->setEnabled(true);
+}
+
 void RestorePage::onRestore()
 {
     // 1. 验证输入
@@ -205,9 +392,22 @@ void RestorePage::onRestore()
         return;
     }
 
-    QString snapshotId = ui->snapshotComboBox->currentData().toString();
-    if (snapshotId.isEmpty()) {
+    // 从表格获取选中的快照
+    int currentRow = ui->snapshotTable->currentRow();
+    if (currentRow < 0) {
         QMessageBox::warning(this, tr("警告"), tr("请先选择一个快照"));
+        return;
+    }
+
+    // 获取快照ID（第一列）
+    QTableWidgetItem* idItem = ui->snapshotTable->item(currentRow, 0);
+    if (!idItem) {
+        QMessageBox::warning(this, tr("警告"), tr("无法获取快照信息"));
+        return;
+    }
+    QString snapshotId = idItem->data(Qt::UserRole).toString();
+    if (snapshotId.isEmpty()) {
+        QMessageBox::warning(this, tr("警告"), tr("无效的快照ID"));
         return;
     }
 
@@ -247,8 +447,18 @@ void RestorePage::onRestore()
     options.sparse = false;
     options.verify = false;
 
+    // 如果选中了包含特定文件/目录
+    if (ui->includeCheckBox->isChecked() && !ui->includeEdit->text().trimmed().isEmpty()) {
+        options.includePaths = ui->includeEdit->text().trimmed().split(';', Qt::SkipEmptyParts);
+    }
+
     // 3. 确认操作
-    QString snapshotText = ui->snapshotComboBox->currentText();
+    QString snapshotText = idItem->text();  // 快照ID显示文本
+    QTableWidgetItem* timeItem = ui->snapshotTable->item(currentRow, 1);
+    if (timeItem) {
+        snapshotText = QString("%1 (%2)").arg(snapshotText).arg(timeItem->text());
+    }
+
     QMessageBox::StandardButton confirm = QMessageBox::question(
         this,
         tr("确认恢复"),
@@ -342,40 +552,85 @@ void RestorePage::onSnapshotsLoaded()
 
 void RestorePage::displaySnapshots(const QList<Models::Snapshot>& snapshots)
 {
-    ui->snapshotComboBox->clear();
+    ui->snapshotTable->setRowCount(0);
 
     if (snapshots.isEmpty()) {
-        ui->snapshotComboBox->addItem(tr("(无快照)"), QString());
         return;
     }
 
-    // 填充快照下拉框（按时间倒序，最新的在前面）
-    for (int i = snapshots.size() - 1; i >= 0; --i) {
-        const Models::Snapshot& snapshot = snapshots[i];
-        QString displayText = QString("%1 - %2")
-            .arg(snapshot.time.toString("yyyy-MM-dd HH:mm:ss"))
-            .arg(snapshot.paths.isEmpty() ? tr("(无路径)") : snapshot.paths.first());
+    // 填充快照表格（按时间倒序，最新的在前面）
+    ui->snapshotTable->setRowCount(snapshots.size());
 
-        if (displayText.length() > 80) {
-            displayText = displayText.left(77) + "...";
+    for (int i = 0; i < snapshots.size(); ++i) {
+        const Models::Snapshot& snapshot = snapshots[snapshots.size() - 1 - i];
+
+        // 快照ID（显示前8位）
+        QString displayId = snapshot.id.left(8);
+        QTableWidgetItem* idItem = new QTableWidgetItem(displayId);
+        idItem->setData(Qt::UserRole, snapshot.fullId.isEmpty() ? snapshot.id : snapshot.fullId);  // 存储完整ID
+        ui->snapshotTable->setItem(i, 0, idItem);
+
+        // 创建时间
+        QTableWidgetItem* timeItem = new QTableWidgetItem(snapshot.time.toString("yyyy-MM-dd HH:mm:ss"));
+        ui->snapshotTable->setItem(i, 1, timeItem);
+
+        // 主机名
+        QTableWidgetItem* hostnameItem = new QTableWidgetItem(snapshot.hostname);
+        ui->snapshotTable->setItem(i, 2, hostnameItem);
+
+        // 路径（显示第一个路径，如果有多个显示省略号）
+        QString pathsText = snapshot.paths.isEmpty() ? tr("(无路径)") : snapshot.paths.first();
+        if (snapshot.paths.size() > 1) {
+            pathsText += QString(" (+%1)").arg(snapshot.paths.size() - 1);
+        }
+        QTableWidgetItem* pathsItem = new QTableWidgetItem(pathsText);
+        pathsItem->setToolTip(snapshot.paths.join("\n"));
+        ui->snapshotTable->setItem(i, 3, pathsItem);
+
+        // 大小（格式化显示）
+        QString sizeText;
+        qint64 size = snapshot.size;
+
+        if (size >= 1024LL * 1024 * 1024 * 1024) {
+            sizeText = QString::number(size / (1024.0 * 1024.0 * 1024.0 * 1024.0), 'f', 2) + " TB";
+        } else if (size >= 1024LL * 1024 * 1024) {
+            sizeText = QString::number(size / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
+        } else if (size >= 1024LL * 1024) {
+            sizeText = QString::number(size / (1024.0 * 1024.0), 'f', 2) + " MB";
+        } else if (size >= 1024) {
+            sizeText = QString::number(size / 1024.0, 'f', 2) + " KB";
+        } else if (size > 0) {
+            sizeText = QString::number(size) + " B";
+        } else {
+            sizeText = "-";
         }
 
-        ui->snapshotComboBox->addItem(displayText, snapshot.id);
+        QTableWidgetItem* sizeItem = new QTableWidgetItem(sizeText);
+        sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        ui->snapshotTable->setItem(i, 4, sizeItem);
+
+        // 标签
+        QTableWidgetItem* tagsItem = new QTableWidgetItem(snapshot.tags.join(", "));
+        ui->snapshotTable->setItem(i, 5, tagsItem);
     }
+
+    // 调整列宽以适应内容
+    ui->snapshotTable->resizeColumnsToContents();
 }
 
 void RestorePage::showLoadingIndicator(bool show)
 {
     if (show) {
-        // 显示"加载中..."提示
-        ui->snapshotComboBox->clear();
-        ui->snapshotComboBox->addItem(tr("正在加载快照列表..."), QString());
-        ui->snapshotComboBox->setEnabled(false);
+        // 显示加载状态
+        ui->snapshotTable->setRowCount(0);
+        ui->snapshotTable->setEnabled(false);
         ui->restoreButton->setEnabled(false);
+        ui->refreshButton->setEnabled(false);
     } else {
         // 启用控件
-        ui->snapshotComboBox->setEnabled(true);
-        ui->restoreButton->setEnabled(true);
+        ui->snapshotTable->setEnabled(true);
+        ui->refreshButton->setEnabled(true);
+        // restoreButton会在选中快照时启用
     }
 }
 
