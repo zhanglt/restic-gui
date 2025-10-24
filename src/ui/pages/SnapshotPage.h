@@ -34,10 +34,13 @@ private slots:
     void onRestoreSnapshot();
     void onRefresh();
     void onSnapshotsLoaded();
+    void onSnapshotSelected(int currentRow, int previousRow = -1);
+    void onSearch();
 
 private:
     void displaySnapshots(const QList<Models::Snapshot>& snapshots);
     void showLoadingIndicator(bool show);
+    void clearDetails();
 
     Ui::SnapshotPage* ui;
     int m_currentRepositoryId;

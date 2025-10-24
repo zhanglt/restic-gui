@@ -23,12 +23,188 @@ SnapshotPage::SnapshotPage(QWidget* parent)
 {
     ui->setupUi(this);
 
+    // ========== 美化界面样式 ==========
+
+    // 设置按钮样式
+    QString dangerButtonStyle = "QPushButton { "
+                                 "background-color: #dc3545; "
+                                 "color: white; "
+                                 "border: none; "
+                                 "border-radius: 4px; "
+                                 "padding: 6px 12px; "
+                                 "min-height: 24px; "
+                                 "} "
+                                 "QPushButton:hover { "
+                                 "background-color: #c82333; "
+                                 "} "
+                                 "QPushButton:pressed { "
+                                 "background-color: #bd2130; "
+                                 "}";
+
+    QString primaryButtonStyle = "QPushButton { "
+                                  "background-color: #007bff; "
+                                  "color: white; "
+                                  "border: none; "
+                                  "border-radius: 4px; "
+                                  "padding: 6px 12px; "
+                                  "min-height: 24px; "
+                                  "font-weight: bold; "
+                                  "} "
+                                  "QPushButton:hover { "
+                                  "background-color: #0056b3; "
+                                  "} "
+                                  "QPushButton:pressed { "
+                                  "background-color: #004494; "
+                                  "}";
+
+    QString secondaryButtonStyle = "QPushButton { "
+                                    "background-color: #6c757d; "
+                                    "color: white; "
+                                    "border: none; "
+                                    "border-radius: 4px; "
+                                    "padding: 6px 12px; "
+                                    "min-height: 24px; "
+                                    "} "
+                                    "QPushButton:hover { "
+                                    "background-color: #5a6268; "
+                                    "} "
+                                    "QPushButton:pressed { "
+                                    "background-color: #545b62; "
+                                    "}";
+
+    // 应用按钮样式
+    ui->deleteButton->setStyleSheet(dangerButtonStyle);
+    ui->browseButton->setStyleSheet(secondaryButtonStyle);
+    ui->restoreButton->setStyleSheet(primaryButtonStyle);
+    ui->refreshButton->setStyleSheet(secondaryButtonStyle);
+    ui->searchButton->setStyleSheet(secondaryButtonStyle);
+
+    // 美化下拉框
+    QString comboBoxStyle = "QComboBox { "
+                            "background-color: white; "
+                            "border: 1px solid #ced4da; "
+                            "border-radius: 4px; "
+                            "padding: 5px 10px; "
+                            "min-height: 24px; "
+                            "} "
+                            "QComboBox:hover { "
+                            "border-color: #80bdff; "
+                            "} "
+                            "QComboBox::drop-down { "
+                            "border: none; "
+                            "width: 20px; "
+                            "} "
+                            "QComboBox::down-arrow { "
+                            "image: none; "
+                            "border-left: 5px solid transparent; "
+                            "border-right: 5px solid transparent; "
+                            "border-top: 5px solid #495057; "
+                            "margin-right: 5px; "
+                            "}";
+    ui->repositoryComboBox->setStyleSheet(comboBoxStyle);
+
+    // 美化输入框
+    QString lineEditStyle = "QLineEdit { "
+                            "background-color: white; "
+                            "border: 1px solid #ced4da; "
+                            "border-radius: 4px; "
+                            "padding: 5px 10px; "
+                            "min-height: 24px; "
+                            "} "
+                            "QLineEdit:focus { "
+                            "border-color: #80bdff; "
+                            "outline: none; "
+                            "}";
+    ui->filterEdit->setStyleSheet(lineEditStyle);
+
+    // 美化表格
+    QString tableStyle = "QTableWidget { "
+                         "background-color: white; "
+                         "border: 1px solid #dee2e6; "
+                         "border-radius: 6px; "
+                         "gridline-color: #dee2e6; "
+                         "} "
+                         "QTableWidget::item { "
+                         "padding: 8px; "
+                         "border-bottom: 1px solid #f0f0f0; "
+                         "} "
+                         "QTableWidget::item:selected { "
+                         "background-color: #e7f3ff; "
+                         "color: #212529; "
+                         "} "
+                         "QHeaderView::section { "
+                         "background-color: #f8f9fa; "
+                         "color: #495057; "
+                         "padding: 10px; "
+                         "border: none; "
+                         "border-right: 1px solid #dee2e6; "
+                         "border-bottom: 2px solid #dee2e6; "
+                         "font-weight: bold; "
+                         "} "
+                         "QHeaderView::section:first { "
+                         "border-top-left-radius: 6px; "
+                         "} "
+                         "QHeaderView::section:last { "
+                         "border-top-right-radius: 6px; "
+                         "border-right: none; "
+                         "}";
+    ui->tableWidget->setStyleSheet(tableStyle);
+
+    // 美化详情面板
+    QString groupBoxStyle = "QGroupBox { "
+                            "background-color: #f8f9fa; "
+                            "border: 1px solid #dee2e6; "
+                            "border-radius: 8px; "
+                            "margin-top: 12px; "
+                            "padding: 15px; "
+                            "font-weight: bold; "
+                            "} "
+                            "QGroupBox::title { "
+                            "subcontrol-origin: margin; "
+                            "subcontrol-position: top left; "
+                            "padding: 5px 10px; "
+                            "color: #495057; "
+                            "}";
+    ui->detailsGroup->setStyleSheet(groupBoxStyle);
+
+    // 美化详情标签
+    QString labelStyle = "QLabel { "
+                         "color: #495057; "
+                         "font-size: 13px; "
+                         "padding: 3px; "
+                         "}";
+
+    // 设置标签样式（标题加粗）
+    ui->label_snapshotId->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_createTime->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_hostname->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_username->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_paths->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_tags->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_parentId->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_fileCount->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_dirCount->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_size->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+
+    // 设置数值标签样式
+    ui->detailSnapshotIdLabel->setStyleSheet(labelStyle);
+    ui->detailCreateTimeLabel->setStyleSheet(labelStyle);
+    ui->detailHostnameLabel->setStyleSheet(labelStyle);
+    ui->detailUsernameLabel->setStyleSheet(labelStyle);
+    ui->detailPathsLabel->setStyleSheet(labelStyle);
+    ui->detailTagsLabel->setStyleSheet(labelStyle);
+    ui->detailParentIdLabel->setStyleSheet(labelStyle);
+    ui->detailFileCountLabel->setStyleSheet(labelStyle);
+    ui->detailDirCountLabel->setStyleSheet(labelStyle);
+    ui->detailSizeLabel->setStyleSheet(labelStyle);
+
     // 设置表格列宽
     ui->tableWidget->setColumnWidth(0, 100);  // 快照ID
     ui->tableWidget->setColumnWidth(1, 150);  // 时间
     ui->tableWidget->setColumnWidth(2, 80);   // 主机名
-    ui->tableWidget->setColumnWidth(3, 250);  // 路径
-    ui->tableWidget->setColumnWidth(4, 120);  // 标签
+    ui->tableWidget->setColumnWidth(3, 200);  // 路径
+    ui->tableWidget->setColumnWidth(4, 100);  // 大小
+    ui->tableWidget->setColumnWidth(5, 120);  // 标签
 
     // 让路径列可以拉伸填充剩余空间
     ui->tableWidget->horizontalHeader()->setStretchLastSection(false);
@@ -49,6 +225,15 @@ SnapshotPage::SnapshotPage(QWidget* parent)
     connect(ui->browseButton, &QPushButton::clicked, this, &SnapshotPage::onBrowseSnapshot);
     connect(ui->restoreButton, &QPushButton::clicked, this, &SnapshotPage::onRestoreSnapshot);
     connect(ui->refreshButton, &QPushButton::clicked, this, &SnapshotPage::onRefresh);
+    connect(ui->searchButton, &QPushButton::clicked, this, &SnapshotPage::onSearch);
+
+    // 连接表格选中信号
+    connect(ui->tableWidget, &QTableWidget::currentCellChanged,
+        [this](int currentRow, int currentColumn, int previousRow, int previousColumn) {
+            Q_UNUSED(currentColumn);
+            Q_UNUSED(previousColumn);
+            onSnapshotSelected(currentRow, previousRow);
+        });
 }
 
 SnapshotPage::~SnapshotPage()
@@ -384,10 +569,33 @@ void SnapshotPage::displaySnapshots(const QList<Models::Snapshot>& snapshots)
         QTableWidgetItem* pathItem = new QTableWidgetItem(pathStr);
         ui->tableWidget->setItem(i, 3, pathItem);
 
+        // 大小
+        QString sizeText;
+        qint64 size = snapshot.size;
+        if (size >= 1024LL * 1024 * 1024 * 1024) {
+            sizeText = QString::number(size / (1024.0 * 1024.0 * 1024.0 * 1024.0), 'f', 2) + " TB";
+        } else if (size >= 1024LL * 1024 * 1024) {
+            sizeText = QString::number(size / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
+        } else if (size >= 1024 * 1024) {
+            sizeText = QString::number(size / (1024.0 * 1024.0), 'f', 2) + " MB";
+        } else if (size >= 1024) {
+            sizeText = QString::number(size / 1024.0, 'f', 2) + " KB";
+        } else {
+            sizeText = QString::number(size) + " B";
+        }
+        QTableWidgetItem* sizeItem = new QTableWidgetItem(sizeText);
+        sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        ui->tableWidget->setItem(i, 4, sizeItem);
+
         // 标签
         QString tagsStr = snapshot.tags.join(", ");
         QTableWidgetItem* tagsItem = new QTableWidgetItem(tagsStr);
-        ui->tableWidget->setItem(i, 4, tagsItem);
+        ui->tableWidget->setItem(i, 5, tagsItem);
+    }
+
+    // 清空详情显示
+    if (snapshots.isEmpty()) {
+        clearDetails();
     }
 }
 
@@ -396,11 +604,11 @@ void SnapshotPage::showLoadingIndicator(bool show)
     if (show) {
         // 清空表格并显示"加载中..."提示
         ui->tableWidget->setRowCount(1);
-        ui->tableWidget->setColumnCount(5);
+        ui->tableWidget->setColumnCount(6);
         QTableWidgetItem* loadingItem = new QTableWidgetItem(tr("正在加载快照列表，请稍候..."));
         loadingItem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(0, 0, loadingItem);
-        ui->tableWidget->setSpan(0, 0, 1, 5); // 合并所有列
+        ui->tableWidget->setSpan(0, 0, 1, 6); // 合并所有列
 
         // 禁用操作按钮
         ui->deleteButton->setEnabled(false);
@@ -418,6 +626,88 @@ void SnapshotPage::showLoadingIndicator(bool show)
         ui->restoreButton->setEnabled(true);
         ui->refreshButton->setEnabled(true);
     }
+}
+
+void SnapshotPage::onSnapshotSelected(int currentRow, int previousRow)
+{
+    Q_UNUSED(previousRow);
+
+    if (currentRow < 0) {
+        clearDetails();
+        return;
+    }
+
+    // 获取快照ID
+    QTableWidgetItem* idItem = ui->tableWidget->item(currentRow, 0);
+    if (!idItem) {
+        clearDetails();
+        return;
+    }
+
+    QString snapshotId = idItem->data(Qt::UserRole).toString();
+
+    // 从表格中获取快照信息
+    QTableWidgetItem* timeItem = ui->tableWidget->item(currentRow, 1);
+    QTableWidgetItem* hostnameItem = ui->tableWidget->item(currentRow, 2);
+    QTableWidgetItem* pathItem = ui->tableWidget->item(currentRow, 3);
+    QTableWidgetItem* sizeItem = ui->tableWidget->item(currentRow, 4);
+    QTableWidgetItem* tagsItem = ui->tableWidget->item(currentRow, 5);
+
+    // 填充详情面板
+    ui->detailSnapshotIdLabel->setText(snapshotId);
+    ui->detailCreateTimeLabel->setText(timeItem ? timeItem->text() : "-");
+    ui->detailHostnameLabel->setText(hostnameItem ? hostnameItem->text() : "-");
+    ui->detailUsernameLabel->setText("-"); // 用户名在表格中没有显示，需要从完整数据获取
+    ui->detailPathsLabel->setText(pathItem ? pathItem->text() : "-");
+    ui->detailSizeLabel->setText(sizeItem ? sizeItem->text() : "-");
+    ui->detailTagsLabel->setText(tagsItem ? tagsItem->text() : tr("无"));
+    ui->detailParentIdLabel->setText("-"); // 父快照需要从完整数据获取
+    ui->detailFileCountLabel->setText("-"); // 文件数需要从完整数据获取
+    ui->detailDirCountLabel->setText("-"); // 目录数需要从完整数据获取
+
+    // TODO: 如果需要更详细的信息，可以从 SnapshotManager 获取完整的快照数据
+}
+
+void SnapshotPage::onSearch()
+{
+    QString filterText = ui->filterEdit->text().trimmed();
+
+    if (filterText.isEmpty()) {
+        // 如果筛选为空，重新加载所有快照
+        loadSnapshots();
+        return;
+    }
+
+    // 简单的客户端筛选
+    for (int i = 0; i < ui->tableWidget->rowCount(); ++i) {
+        bool match = false;
+
+        // 检查每一列是否包含筛选文本
+        for (int col = 0; col < ui->tableWidget->columnCount(); ++col) {
+            QTableWidgetItem* item = ui->tableWidget->item(i, col);
+            if (item && item->text().contains(filterText, Qt::CaseInsensitive)) {
+                match = true;
+                break;
+            }
+        }
+
+        // 根据匹配结果显示或隐藏行
+        ui->tableWidget->setRowHidden(i, !match);
+    }
+}
+
+void SnapshotPage::clearDetails()
+{
+    ui->detailSnapshotIdLabel->setText("-");
+    ui->detailCreateTimeLabel->setText("-");
+    ui->detailHostnameLabel->setText("-");
+    ui->detailUsernameLabel->setText("-");
+    ui->detailPathsLabel->setText("-");
+    ui->detailTagsLabel->setText("-");
+    ui->detailParentIdLabel->setText("-");
+    ui->detailFileCountLabel->setText("-");
+    ui->detailDirCountLabel->setText("-");
+    ui->detailSizeLabel->setText("-");
 }
 
 } // namespace UI
