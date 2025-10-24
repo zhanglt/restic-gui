@@ -14,51 +14,16 @@
    <item>
     <layout class="QHBoxLayout" name="toolbarLayout">
      <item>
-      <widget class="QPushButton" name="createButton">
-       <property name="text">
-        <string>新建仓库</string>
+      <widget class="QLabel" name="titleLabel">
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="editButton">
        <property name="text">
-        <string>编辑</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="deleteButton">
-       <property name="text">
-        <string>删除</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="refreshButton">
-       <property name="text">
-        <string>刷新</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="unlockButton">
-       <property name="text">
-        <string>解锁仓库</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="checkButton">
-       <property name="text">
-        <string>检查仓库</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pruneButton">
-       <property name="text">
-        <string>维护仓库</string>
+        <string>仓库管理</string>
        </property>
       </widget>
      </item>
@@ -74,6 +39,55 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="createButton">
+       <property name="text">
+        <string>创建新仓库</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="connectButton">
+       <property name="text">
+        <string>连接已有仓库</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="checkButton">
+       <property name="text">
+        <string>检查仓库</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="editButton">
+       <property name="text">
+        <string>编辑配置</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="repairButton">
+       <property name="text">
+        <string>修复仓库</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pruneButton">
+       <property name="text">
+        <string>清理仓库</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="deleteButton">
+       <property name="text">
+        <string>删除仓库</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -96,7 +110,12 @@
      </attribute>
      <column>
       <property name="text">
-       <string>名称</string>
+       <string>默认</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>仓库名称</string>
       </property>
      </column>
      <column>
@@ -106,19 +125,144 @@
      </column>
      <column>
       <property name="text">
-       <string>路径</string>
+       <string>位置</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>最后备份</string>
+       <string>快照数</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>默认</string>
+       <string>大小</string>
       </property>
      </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="detailsGroup">
+     <property name="title">
+      <string>选中仓库详情</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_details">
+      <item>
+       <layout class="QFormLayout" name="formLayout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_name">
+          <property name="text">
+           <string>名称:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="detailNameLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_type">
+          <property name="text">
+           <string>类型:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="detailTypeLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_path">
+          <property name="text">
+           <string>路径:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="detailPathLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_created">
+          <property name="text">
+           <string>创建时间:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="detailCreatedLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="label_lastBackup">
+          <property name="text">
+           <string>最后备份:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QLabel" name="detailLastBackupLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_snapshots">
+          <property name="text">
+           <string>快照数量:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLabel" name="detailSnapshotsLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="label_size">
+          <property name="text">
+           <string>总大小:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <widget class="QLabel" name="detailSizeLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="0">
+         <widget class="QLabel" name="label_original">
+          <property name="text">
+           <string>原始数据:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="1">
+         <widget class="QLabel" name="detailOriginalLabel">
+          <property name="text">
+           <string>-</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

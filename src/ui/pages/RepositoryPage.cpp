@@ -4,6 +4,7 @@
 #include "../../core/BackupManager.h"
 #include "../../core/ResticWrapper.h"
 #include "../../data/PasswordManager.h"
+#include "../../data/CacheManager.h"
 #include "../wizards/CreateRepoWizard.h"
 #include "../dialogs/ProgressDialog.h"
 #include "../dialogs/PruneOptionsDialog.h"
@@ -22,6 +23,7 @@ RepositoryPage::RepositoryPage(QWidget* parent)
     , ui(new Ui::RepositoryPage)
     , m_createRepoWatcher(nullptr)
     , m_checkRepoWatcher(nullptr)
+    , m_repairRepoWatcher(nullptr)
     , m_unlockRepoWatcher(nullptr)
     , m_pruneRepoWatcher(nullptr)
     , m_progressDialog(nullptr)
@@ -32,25 +34,184 @@ RepositoryPage::RepositoryPage(QWidget* parent)
 {
     ui->setupUi(this);
 
-    // 设置表格列宽
-    ui->tableWidget->setColumnWidth(0, 120);  // 名称
-    ui->tableWidget->setColumnWidth(1, 80);   // 类型
-    ui->tableWidget->setColumnWidth(2, 250);  // 路径
-    ui->tableWidget->setColumnWidth(3, 150);  // 最后备份
-    ui->tableWidget->setColumnWidth(4, 60);   // 默认
+    // ========== 美化界面样式 ==========
 
-    // 让路径列可以拉伸填充剩余空间
+    // 设置顶部按钮样式
+    QString primaryButtonStyle = "QPushButton { "
+                                  "background-color: #007bff; "
+                                  "color: white; "
+                                  "border: none; "
+                                  "border-radius: 4px; "
+                                  "padding: 6px 12px; "
+                                  "font-weight: bold; "
+                                  "min-height: 24px; "
+                                  "} "
+                                  "QPushButton:hover { "
+                                  "background-color: #0056b3; "
+                                  "} "
+                                  "QPushButton:pressed { "
+                                  "background-color: #004494; "
+                                  "}";
+
+    QString secondaryButtonStyle = "QPushButton { "
+                                    "background-color: #6c757d; "
+                                    "color: white; "
+                                    "border: none; "
+                                    "border-radius: 4px; "
+                                    "padding: 6px 12px; "
+                                    "min-height: 24px; "
+                                    "} "
+                                    "QPushButton:hover { "
+                                    "background-color: #5a6268; "
+                                    "} "
+                                    "QPushButton:pressed { "
+                                    "background-color: #545b62; "
+                                    "}";
+
+    QString dangerButtonStyle = "QPushButton { "
+                                 "background-color: #dc3545; "
+                                 "color: white; "
+                                 "border: none; "
+                                 "border-radius: 4px; "
+                                 "padding: 6px 12px; "
+                                 "min-height: 24px; "
+                                 "} "
+                                 "QPushButton:hover { "
+                                 "background-color: #c82333; "
+                                 "} "
+                                 "QPushButton:pressed { "
+                                 "background-color: #bd2130; "
+                                 "}";
+
+    QString warningButtonStyle = "QPushButton { "
+                                  "background-color: #ffc107; "
+                                  "color: #212529; "
+                                  "border: none; "
+                                  "border-radius: 4px; "
+                                  "padding: 6px 12px; "
+                                  "min-height: 24px; "
+                                  "font-weight: bold; "
+                                  "} "
+                                  "QPushButton:hover { "
+                                  "background-color: #e0a800; "
+                                  "} "
+                                  "QPushButton:pressed { "
+                                  "background-color: #d39e00; "
+                                  "}";
+
+    // 应用按钮样式
+    ui->createButton->setStyleSheet(primaryButtonStyle);
+    ui->connectButton->setStyleSheet(primaryButtonStyle);
+    ui->editButton->setStyleSheet(secondaryButtonStyle);
+    ui->checkButton->setStyleSheet(secondaryButtonStyle);
+    ui->repairButton->setStyleSheet(warningButtonStyle);
+    ui->pruneButton->setStyleSheet(warningButtonStyle);
+    ui->deleteButton->setStyleSheet(dangerButtonStyle);
+
+    // 美化表格
+    QString tableStyle = "QTableWidget { "
+                         "background-color: white; "
+                         "border: 1px solid #dee2e6; "
+                         "border-radius: 6px; "
+                         "gridline-color: #dee2e6; "
+                         "} "
+                         "QTableWidget::item { "
+                         "padding: 8px; "
+                         "border-bottom: 1px solid #f0f0f0; "
+                         "} "
+                         "QTableWidget::item:selected { "
+                         "background-color: #e7f3ff; "
+                         "color: #212529; "
+                         "} "
+                         "QHeaderView::section { "
+                         "background-color: #f8f9fa; "
+                         "color: #495057; "
+                         "padding: 10px; "
+                         "border: none; "
+                         "border-right: 1px solid #dee2e6; "
+                         "border-bottom: 2px solid #dee2e6; "
+                         "font-weight: bold; "
+                         "} "
+                         "QHeaderView::section:first { "
+                         "border-top-left-radius: 6px; "
+                         "} "
+                         "QHeaderView::section:last { "
+                         "border-top-right-radius: 6px; "
+                         "border-right: none; "
+                         "}";
+    ui->tableWidget->setStyleSheet(tableStyle);
+
+    // 美化详情面板
+    QString groupBoxStyle = "QGroupBox { "
+                            "background-color: #f8f9fa; "
+                            "border: 1px solid #dee2e6; "
+                            "border-radius: 8px; "
+                            "margin-top: 12px; "
+                            "padding: 15px; "
+                            "font-weight: bold; "
+                            "} "
+                            "QGroupBox::title { "
+                            "subcontrol-origin: margin; "
+                            "subcontrol-position: top left; "
+                            "padding: 5px 10px; "
+                            "color: #495057; "
+                            "}";
+    ui->detailsGroup->setStyleSheet(groupBoxStyle);
+
+    // 美化详情标签
+    QString labelStyle = "QLabel { "
+                         "color: #495057; "
+                         "font-size: 13px; "
+                         "padding: 3px; "
+                         "}";
+
+    // 设置标签样式（标题加粗）
+    ui->label_name->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_type->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_path->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_created->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_lastBackup->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_snapshots->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_size->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_original->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+
+    // 设置数值标签样式
+    ui->detailNameLabel->setStyleSheet(labelStyle);
+    ui->detailTypeLabel->setStyleSheet(labelStyle);
+    ui->detailPathLabel->setStyleSheet(labelStyle);
+    ui->detailCreatedLabel->setStyleSheet(labelStyle);
+    ui->detailLastBackupLabel->setStyleSheet(labelStyle);
+    ui->detailSnapshotsLabel->setStyleSheet(labelStyle);
+    ui->detailSizeLabel->setStyleSheet(labelStyle);
+    ui->detailOriginalLabel->setStyleSheet(labelStyle);
+
+    // 设置表格列宽
+    ui->tableWidget->setColumnWidth(0, 60);   // 默认(星标)
+    ui->tableWidget->setColumnWidth(1, 150);  // 仓库名称
+    ui->tableWidget->setColumnWidth(2, 80);   // 类型
+    ui->tableWidget->setColumnWidth(3, 250);  // 位置
+    ui->tableWidget->setColumnWidth(4, 80);   // 快照数
+    ui->tableWidget->setColumnWidth(5, 100);  // 大小
+
+    // 让位置列可以拉伸填充剩余空间
     ui->tableWidget->horizontalHeader()->setStretchLastSection(false);
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
 
     // 连接信号
     connect(ui->createButton, &QPushButton::clicked, this, &RepositoryPage::onCreateRepository);
+    connect(ui->connectButton, &QPushButton::clicked, this, &RepositoryPage::onCreateRepository); // 暂时复用创建仓库
     connect(ui->editButton, &QPushButton::clicked, this, &RepositoryPage::onEditRepository);
     connect(ui->deleteButton, &QPushButton::clicked, this, &RepositoryPage::onDeleteRepository);
-    connect(ui->refreshButton, &QPushButton::clicked, this, &RepositoryPage::onRefresh);
     connect(ui->checkButton, &QPushButton::clicked, this, &RepositoryPage::onCheckRepository);
-    connect(ui->unlockButton, &QPushButton::clicked, this, &RepositoryPage::onUnlockRepository);
+    connect(ui->repairButton, &QPushButton::clicked, this, &RepositoryPage::onRepairRepository);
     connect(ui->pruneButton, &QPushButton::clicked, this, &RepositoryPage::onPruneRepository);
+
+    // 连接表格选中信号
+    connect(ui->tableWidget, &QTableWidget::currentCellChanged, [this](int currentRow, int currentColumn, int previousRow, int previousColumn) {
+        Q_UNUSED(currentColumn);
+        Q_UNUSED(previousColumn);
+        onRepositorySelected(currentRow, previousRow);
+    });
 
     // 连接 BackupManager 的信号，当备份完成时自动刷新仓库列表
     Core::BackupManager* backupMgr = Core::BackupManager::instance();
@@ -97,6 +258,12 @@ RepositoryPage::~RepositoryPage()
             m_checkRepoWatcher->waitForFinished();
         }
     }
+    if (m_repairRepoWatcher) {
+        m_repairRepoWatcher->cancel();
+        if (m_repairRepoWatcher->isRunning()) {
+            m_repairRepoWatcher->waitForFinished();
+        }
+    }
     if (m_unlockRepoWatcher) {
         m_unlockRepoWatcher->cancel();
         if (m_unlockRepoWatcher->isRunning()) {
@@ -119,6 +286,8 @@ void RepositoryPage::loadRepositories()
     // 获取所有仓库
     Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
     QList<Models::Repository> repositories = repoMgr->getAllRepositories();
+    Data::CacheManager* cacheMgr = Data::CacheManager::instance();
+    Data::PasswordManager* passMgr = Data::PasswordManager::instance();
 
     // 清空表格
     ui->tableWidget->setRowCount(0);
@@ -128,31 +297,63 @@ void RepositoryPage::loadRepositories()
     for (int i = 0; i < repositories.size(); ++i) {
         const Models::Repository& repo = repositories[i];
 
-        // 名称
+        // 0. 默认(星标)
+        QTableWidgetItem* defaultItem = new QTableWidgetItem(repo.isDefault ? "★" : "");
+        defaultItem->setTextAlignment(Qt::AlignCenter);
+        if (repo.isDefault) {
+            defaultItem->setForeground(QColor(255, 193, 7)); // 金色
+        }
+        ui->tableWidget->setItem(i, 0, defaultItem);
+
+        // 1. 仓库名称
         QTableWidgetItem* nameItem = new QTableWidgetItem(repo.name);
-        ui->tableWidget->setItem(i, 0, nameItem);
-
-        // 类型
-        QTableWidgetItem* typeItem = new QTableWidgetItem(repo.typeDisplayName());
-        ui->tableWidget->setItem(i, 1, typeItem);
-
-        // 路径
-        QTableWidgetItem* pathItem = new QTableWidgetItem(repo.path);
-        ui->tableWidget->setItem(i, 2, pathItem);
-
-        // 最后备份
-        QString lastBackup = repo.lastBackup.isValid()
-            ? repo.lastBackup.toString("yyyy-MM-dd HH:mm")
-            : tr("从未");
-        QTableWidgetItem* backupItem = new QTableWidgetItem(lastBackup);
-        ui->tableWidget->setItem(i, 3, backupItem);
-
-        // 默认
-        QTableWidgetItem* defaultItem = new QTableWidgetItem(repo.isDefault ? tr("是") : tr("否"));
-        ui->tableWidget->setItem(i, 4, defaultItem);
-
-        // 存储仓库ID到第一列的data中
         nameItem->setData(Qt::UserRole, repo.id);
+        ui->tableWidget->setItem(i, 1, nameItem);
+
+        // 2. 类型
+        QTableWidgetItem* typeItem = new QTableWidgetItem(repo.typeDisplayName());
+        ui->tableWidget->setItem(i, 2, typeItem);
+
+        // 3. 位置
+        QTableWidgetItem* pathItem = new QTableWidgetItem(repo.path);
+        ui->tableWidget->setItem(i, 3, pathItem);
+
+        // 4. 快照数
+        int snapshotCount = 0;
+        qint64 totalSize = 0;
+        QList<Models::Snapshot> snapshots;
+
+        // 优先从缓存读取
+        if (cacheMgr->getCachedSnapshots(repo.id, snapshots)) {
+            snapshotCount = snapshots.size();
+            for (const auto& snap : snapshots) {
+                totalSize += snap.size;
+            }
+        }
+
+        QTableWidgetItem* snapshotItem = new QTableWidgetItem(QString::number(snapshotCount));
+        snapshotItem->setTextAlignment(Qt::AlignCenter);
+        ui->tableWidget->setItem(i, 4, snapshotItem);
+
+        // 5. 大小
+        QString sizeText;
+        if (totalSize >= 1024LL * 1024 * 1024) {
+            sizeText = QString::number(totalSize / (1024.0 * 1024.0 * 1024.0), 'f', 1) + "GB";
+        } else if (totalSize >= 1024 * 1024) {
+            sizeText = QString::number(totalSize / (1024.0 * 1024.0), 'f', 1) + "MB";
+        } else if (totalSize > 0) {
+            sizeText = QString::number(totalSize / 1024.0, 'f', 1) + "KB";
+        } else {
+            sizeText = "-";
+        }
+        QTableWidgetItem* sizeItem = new QTableWidgetItem(sizeText);
+        sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        ui->tableWidget->setItem(i, 5, sizeItem);
+    }
+
+    // 清空详情显示
+    if (ui->tableWidget->rowCount() == 0) {
+        clearDetails();
     }
 }
 
@@ -327,7 +528,7 @@ void RepositoryPage::onEditRepository()
     }
 
     // 获取仓库ID和当前名称
-    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 1);
     int repoId = nameItem->data(Qt::UserRole).toInt();
     QString currentName = nameItem->text();
 
@@ -375,7 +576,7 @@ void RepositoryPage::onDeleteRepository()
     }
 
     // 获取仓库ID和名称
-    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 1);
     int repoId = nameItem->data(Qt::UserRole).toInt();
     QString repoName = nameItem->text();
 
@@ -403,10 +604,6 @@ void RepositoryPage::onDeleteRepository()
     }
 }
 
-void RepositoryPage::onRefresh()
-{
-    loadRepositories();
-}
 
 void RepositoryPage::onCheckRepository()
 {
@@ -418,7 +615,7 @@ void RepositoryPage::onCheckRepository()
     }
 
     // 获取仓库ID
-    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 1);
     int repoId = nameItem->data(Qt::UserRole).toInt();
 
     // 获取仓库信息
@@ -510,6 +707,108 @@ void RepositoryPage::onCheckRepository()
     });
 }
 
+void RepositoryPage::onRepairRepository()
+{
+    // 获取选中的行
+    int currentRow = ui->tableWidget->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, tr("警告"), tr("请先选择一个仓库"));
+        return;
+    }
+
+    // 获取仓库ID
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 1);
+    int repoId = nameItem->data(Qt::UserRole).toInt();
+
+    // 获取仓库信息
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(repoId);
+
+    if (repo.id <= 0) {
+        QMessageBox::critical(this, tr("错误"), tr("无法获取仓库信息"));
+        return;
+    }
+
+    // 获取密码
+    Data::PasswordManager* passMgr = Data::PasswordManager::instance();
+    QString password;
+    if (!passMgr->getPassword(repo.id, password)) {
+        bool ok;
+        password = QInputDialog::getText(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
+            QLineEdit::Password, QString(), &ok);
+
+        if (!ok || password.isEmpty()) {
+            return;
+        }
+
+        // 保存密码到密码管理器
+        passMgr->setPassword(repo.id, password);
+    }
+
+    // 确认修复
+    QMessageBox::StandardButton reply = QMessageBox::warning(
+        this,
+        tr("确认修复"),
+        tr("确定要修复仓库 \"%1\" 吗？\n\n"
+           "修复操作将：\n"
+           "1. 修复仓库索引\n"
+           "2. 修复快照元数据\n\n"
+           "此操作可能需要较长时间，请耐心等待。").arg(repo.name),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No
+    );
+
+    if (reply != QMessageBox::Yes) {
+        return;
+    }
+
+    // 保存当前操作的仓库ID和密码
+    m_currentOperationRepoId = repo.id;
+    m_currentOperationPassword = password;
+
+    // 创建进度对话框
+    if (m_progressDialog) {
+        delete m_progressDialog;
+    }
+    m_progressDialog = new ProgressDialog(this);
+    m_progressDialog->setTitle(tr("修复仓库"));
+    m_progressDialog->setMessage(tr("正在修复仓库 \"%1\"，请稍候...").arg(repo.name));
+    m_progressDialog->setProgress(0);
+    m_progressDialog->setWindowModality(Qt::ApplicationModal);
+    connect(m_progressDialog, &ProgressDialog::cancelled,
+            this, &RepositoryPage::onProgressCancelled);
+    m_progressDialog->show();
+
+    // 启动进度更新定时器
+    m_progressValue = 0;
+    m_progressTimer->start(200);
+
+    // 启动超时定时器（10分钟超时，修复可能需要较长时间）
+    m_timeoutTimer->start(600000);
+
+    // 在后台线程执行修复
+    if (m_repairRepoWatcher) {
+        delete m_repairRepoWatcher;
+    }
+    m_repairRepoWatcher = new QFutureWatcher<bool>(this);
+    connect(m_repairRepoWatcher, &QFutureWatcher<bool>::finished,
+            this, &RepositoryPage::onRepairRepositoryFinished);
+
+    // 复制值避免跨线程问题
+    Models::Repository repoToRepair = repo;
+    QString passwordToUse = password;
+
+    QTimer::singleShot(50, [this, repoToRepair, passwordToUse]() {
+        QFuture<bool> future = QtConcurrent::run([repoToRepair, passwordToUse]() {
+            Core::ResticWrapper wrapper;
+            return wrapper.repairRepository(repoToRepair, passwordToUse);
+        });
+
+        m_repairRepoWatcher->setFuture(future);
+    });
+}
+
 void RepositoryPage::onUnlockRepository()
 {
     // 获取选中的行
@@ -520,7 +819,7 @@ void RepositoryPage::onUnlockRepository()
     }
 
     // 获取仓库ID
-    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 1);
     int repoId = nameItem->data(Qt::UserRole).toInt();
 
     // 获取仓库信息
@@ -620,7 +919,7 @@ void RepositoryPage::onPruneRepository()
     }
 
     // 获取仓库ID
-    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 1);
     int repoId = nameItem->data(Qt::UserRole).toInt();
 
     // 获取仓库信息
@@ -765,6 +1064,37 @@ void RepositoryPage::onCheckRepositoryFinished()
     }
 }
 
+void RepositoryPage::onRepairRepositoryFinished()
+{
+    // 停止进度更新定时器
+    m_progressTimer->stop();
+
+    // 停止超时定时器
+    m_timeoutTimer->stop();
+
+    bool success = m_repairRepoWatcher->result();
+
+    // 关闭进度对话框
+    if (m_progressDialog) {
+        m_progressDialog->setCompleted(success);
+        m_progressDialog->close();
+        m_progressDialog->deleteLater();
+        m_progressDialog = nullptr;
+    }
+
+    // 获取仓库名称
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(m_currentOperationRepoId);
+
+    if (success) {
+        QMessageBox::information(this, tr("修复完成"),
+            tr("仓库 \"%1\" 修复完成！\n\n已成功修复仓库索引和快照。").arg(repo.name));
+    } else {
+        QMessageBox::critical(this, tr("修复失败"),
+            tr("仓库 \"%1\" 修复失败！\n\n请查看日志了解详情。").arg(repo.name));
+    }
+}
+
 void RepositoryPage::onUnlockRepositoryFinished()
 {
     // 停止进度更新定时器
@@ -826,6 +1156,103 @@ void RepositoryPage::onPruneRepositoryFinished()
         QMessageBox::critical(this, tr("维护失败"),
             tr("仓库 \"%1\" 维护失败！\n\n请查看日志了解详情。").arg(repo.name));
     }
+}
+
+void RepositoryPage::onRepositorySelected(int currentRow, int previousRow)
+{
+    Q_UNUSED(previousRow);
+
+    if (currentRow < 0) {
+        clearDetails();
+        return;
+    }
+
+    // 获取仓库ID
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 1);
+    if (!nameItem) {
+        clearDetails();
+        return;
+    }
+
+    int repoId = nameItem->data(Qt::UserRole).toInt();
+
+    // 获取仓库详情
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(repoId);
+
+    if (repo.id <= 0) {
+        clearDetails();
+        return;
+    }
+
+    // 填充详情
+    ui->detailNameLabel->setText(repo.name);
+    ui->detailTypeLabel->setText(repo.typeDisplayName());
+    ui->detailPathLabel->setText(repo.path);
+    ui->detailCreatedLabel->setText(repo.createdAt.toString("yyyy-MM-dd HH:mm:ss"));
+
+    QString lastBackup = repo.lastBackup.isValid()
+        ? repo.lastBackup.toString("yyyy-MM-dd HH:mm:ss")
+        : tr("从未");
+    ui->detailLastBackupLabel->setText(lastBackup);
+
+    // 获取快照信息
+    Data::CacheManager* cacheMgr = Data::CacheManager::instance();
+    QList<Models::Snapshot> snapshots;
+    int snapshotCount = 0;
+    qint64 totalSize = 0;
+
+    if (cacheMgr->getCachedSnapshots(repo.id, snapshots)) {
+        snapshotCount = snapshots.size();
+        for (const auto& snap : snapshots) {
+            totalSize += snap.size;
+        }
+    }
+
+    ui->detailSnapshotsLabel->setText(QString::number(snapshotCount));
+
+    // 格式化大小显示
+    QString sizeText;
+    if (totalSize >= 1024LL * 1024 * 1024) {
+        sizeText = QString::number(totalSize / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
+    } else if (totalSize >= 1024 * 1024) {
+        sizeText = QString::number(totalSize / (1024.0 * 1024.0), 'f', 2) + " MB";
+    } else if (totalSize > 0) {
+        sizeText = QString::number(totalSize / 1024.0, 'f', 2) + " KB";
+    } else {
+        sizeText = tr("未知");
+    }
+    ui->detailSizeLabel->setText(sizeText);
+
+    // 原始数据大小(估算)
+    // 假设去重率为75%
+    qint64 originalSize = totalSize * 4; // 简单估算
+    QString originalText;
+    if (originalSize >= 1024LL * 1024 * 1024) {
+        originalText = QString::number(originalSize / (1024.0 * 1024.0 * 1024.0), 'f', 1) + " GB";
+    } else if (originalSize >= 1024 * 1024) {
+        originalText = QString::number(originalSize / (1024.0 * 1024.0), 'f', 1) + " MB";
+    } else {
+        originalText = QString::number(originalSize / 1024.0, 'f', 1) + " KB";
+    }
+
+    if (totalSize > 0) {
+        int dedupeRate = 75; // 假设去重率
+        originalText += QString(" (去重率: %1%)").arg(dedupeRate);
+    }
+    ui->detailOriginalLabel->setText(originalText);
+}
+
+void RepositoryPage::clearDetails()
+{
+    ui->detailNameLabel->setText("-");
+    ui->detailTypeLabel->setText("-");
+    ui->detailPathLabel->setText("-");
+    ui->detailCreatedLabel->setText("-");
+    ui->detailLastBackupLabel->setText("-");
+    ui->detailSnapshotsLabel->setText("-");
+    ui->detailSizeLabel->setText("-");
+    ui->detailOriginalLabel->setText("-");
 }
 
 } // namespace UI

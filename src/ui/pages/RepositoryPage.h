@@ -30,22 +30,26 @@ private slots:
     void onCreateRepository();
     void onEditRepository();
     void onDeleteRepository();
-    void onRefresh();
     void onCheckRepository();
+    void onRepairRepository();
     void onUnlockRepository();
     void onPruneRepository();
     void onCreateRepositoryFinished();
     void onCheckRepositoryFinished();
+    void onRepairRepositoryFinished();
     void onUnlockRepositoryFinished();
     void onPruneRepositoryFinished();
     void onUpdateProgress();
     void onProgressCancelled();
+    void onRepositorySelected(int currentRow, int previousRow = -1);
 
 private:
+    void clearDetails();
 
     Ui::RepositoryPage* ui;
     QFutureWatcher<int>* m_createRepoWatcher;
     QFutureWatcher<bool>* m_checkRepoWatcher;
+    QFutureWatcher<bool>* m_repairRepoWatcher;
     QFutureWatcher<bool>* m_unlockRepoWatcher;
     QFutureWatcher<bool>* m_pruneRepoWatcher;
     ProgressDialog* m_progressDialog;

@@ -101,6 +101,34 @@ bool ResticWrapper::checkRepository(const Models::Repository& repo, const QStrin
     return false;
 }
 
+bool ResticWrapper::repairRepository(const Models::Repository& repo, const QString& password)
+{
+    QStringList args;
+    args << "repair" << "index";
+
+    QString output;
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("修复仓库索引: %1").arg(repo.name));
+
+    if (executeCommand(args, output, true, password, &repo)) {
+        Utils::Logger::instance()->log(Utils::Logger::Info, "仓库索引修复完成");
+
+        // 修复快照
+        args.clear();
+        args << "repair" << "snapshots";
+
+        Utils::Logger::instance()->log(Utils::Logger::Info,
+            QString("修复仓库快照: %1").arg(repo.name));
+
+        if (executeCommand(args, output, true, password, &repo)) {
+            Utils::Logger::instance()->log(Utils::Logger::Info, "仓库快照修复完成");
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool ResticWrapper::unlockRepository(const Models::Repository& repo, const QString& password)
 {
     QStringList args;

@@ -63,6 +63,14 @@ public:
     bool checkRepository(const Models::Repository& repo, const QString& password, bool readData = false);
 
     /**
+     * @brief 修复仓库
+     * @param repo 仓库信息
+     * @param password 仓库密码
+     * @return 成功返回true
+     */
+    bool repairRepository(const Models::Repository& repo, const QString& password);
+
+    /**
      * @brief 解锁仓库
      * @param repo 仓库信息
      * @param password 仓库密码
