@@ -29,8 +29,11 @@ private slots:
     void onRunTask();
     void onRefresh();
     void onPasswordError(int taskId, int repoId);
+    void onTaskSelected(int currentRow, int previousRow = -1);
 
 private:
+    void clearDetails();
+
     Ui::BackupPage* ui;
 };
 

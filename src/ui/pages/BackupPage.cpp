@@ -20,16 +20,165 @@ BackupPage::BackupPage(QWidget* parent)
 {
     ui->setupUi(this);
 
+    // ========== 美化界面样式 ==========
+
+    // 设置按钮样式
+    QString primaryButtonStyle = "QPushButton { "
+                                  "background-color: #007bff; "
+                                  "color: white; "
+                                  "border: none; "
+                                  "border-radius: 4px; "
+                                  "padding: 6px 12px; "
+                                  "min-height: 24px; "
+                                  "font-weight: bold; "
+                                  "} "
+                                  "QPushButton:hover { "
+                                  "background-color: #0056b3; "
+                                  "} "
+                                  "QPushButton:pressed { "
+                                  "background-color: #004494; "
+                                  "}";
+
+    QString secondaryButtonStyle = "QPushButton { "
+                                    "background-color: #6c757d; "
+                                    "color: white; "
+                                    "border: none; "
+                                    "border-radius: 4px; "
+                                    "padding: 6px 12px; "
+                                    "min-height: 24px; "
+                                    "} "
+                                    "QPushButton:hover { "
+                                    "background-color: #5a6268; "
+                                    "} "
+                                    "QPushButton:pressed { "
+                                    "background-color: #545b62; "
+                                    "}";
+
+    QString successButtonStyle = "QPushButton { "
+                                  "background-color: #28a745; "
+                                  "color: white; "
+                                  "border: none; "
+                                  "border-radius: 4px; "
+                                  "padding: 6px 12px; "
+                                  "min-height: 24px; "
+                                  "font-weight: bold; "
+                                  "} "
+                                  "QPushButton:hover { "
+                                  "background-color: #218838; "
+                                  "} "
+                                  "QPushButton:pressed { "
+                                  "background-color: #1e7e34; "
+                                  "}";
+
+    QString dangerButtonStyle = "QPushButton { "
+                                 "background-color: #dc3545; "
+                                 "color: white; "
+                                 "border: none; "
+                                 "border-radius: 4px; "
+                                 "padding: 6px 12px; "
+                                 "min-height: 24px; "
+                                 "} "
+                                 "QPushButton:hover { "
+                                 "background-color: #c82333; "
+                                 "} "
+                                 "QPushButton:pressed { "
+                                 "background-color: #bd2130; "
+                                 "}";
+
+    // 应用按钮样式
+    ui->createButton->setStyleSheet(primaryButtonStyle);
+    ui->editButton->setStyleSheet(secondaryButtonStyle);
+    ui->deleteButton->setStyleSheet(dangerButtonStyle);
+    ui->toggleButton->setStyleSheet(secondaryButtonStyle);
+    ui->runButton->setStyleSheet(successButtonStyle);
+    ui->refreshButton->setStyleSheet(secondaryButtonStyle);
+
+    // 美化表格
+    QString tableStyle = "QTableWidget { "
+                         "background-color: white; "
+                         "border: 1px solid #dee2e6; "
+                         "border-radius: 6px; "
+                         "gridline-color: #dee2e6; "
+                         "} "
+                         "QTableWidget::item { "
+                         "padding: 8px; "
+                         "border-bottom: 1px solid #f0f0f0; "
+                         "} "
+                         "QTableWidget::item:selected { "
+                         "background-color: #e7f3ff; "
+                         "color: #212529; "
+                         "} "
+                         "QHeaderView::section { "
+                         "background-color: #f8f9fa; "
+                         "color: #495057; "
+                         "padding: 10px; "
+                         "border: none; "
+                         "border-right: 1px solid #dee2e6; "
+                         "border-bottom: 2px solid #dee2e6; "
+                         "font-weight: bold; "
+                         "} "
+                         "QHeaderView::section:first { "
+                         "border-top-left-radius: 6px; "
+                         "} "
+                         "QHeaderView::section:last { "
+                         "border-top-right-radius: 6px; "
+                         "border-right: none; "
+                         "}";
+    ui->tableWidget->setStyleSheet(tableStyle);
+
+    // 美化详情面板
+    QString groupBoxStyle = "QGroupBox { "
+                            "background-color: #f8f9fa; "
+                            "border: 1px solid #dee2e6; "
+                            "border-radius: 8px; "
+                            "margin-top: 12px; "
+                            "padding: 15px; "
+                            "font-weight: bold; "
+                            "} "
+                            "QGroupBox::title { "
+                            "subcontrol-origin: margin; "
+                            "subcontrol-position: top left; "
+                            "padding: 5px 10px; "
+                            "color: #495057; "
+                            "}";
+    ui->detailsGroup->setStyleSheet(groupBoxStyle);
+
+    // 美化详情标签
+    QString labelStyle = "QLabel { "
+                         "color: #495057; "
+                         "font-size: 13px; "
+                         "padding: 3px; "
+                         "}";
+
+    // 设置标签样式（标题加粗）
+    ui->label_name->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_repo->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_paths->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_excludes->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_tags->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_schedule->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_lastRun->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+    ui->label_nextRun->setStyleSheet("QLabel { color: #212529; font-weight: bold; }");
+
+    // 设置数值标签样式
+    ui->detailNameLabel->setStyleSheet(labelStyle);
+    ui->detailRepoLabel->setStyleSheet(labelStyle);
+    ui->detailPathsLabel->setStyleSheet(labelStyle);
+    ui->detailExcludesLabel->setStyleSheet(labelStyle);
+    ui->detailTagsLabel->setStyleSheet(labelStyle);
+    ui->detailScheduleLabel->setStyleSheet(labelStyle);
+    ui->detailLastRunLabel->setStyleSheet(labelStyle);
+    ui->detailNextRunLabel->setStyleSheet(labelStyle);
+
     // 设置表格列宽
     ui->tableWidget->setColumnWidth(0, 150);  // 任务名称
-    ui->tableWidget->setColumnWidth(1, 120);  // 仓库
-    ui->tableWidget->setColumnWidth(2, 200);  // 源路径
-    ui->tableWidget->setColumnWidth(3, 80);   // 计划
-    ui->tableWidget->setColumnWidth(4, 140);  // 上次运行
-    ui->tableWidget->setColumnWidth(5, 140);  // 下次运行
-    ui->tableWidget->setColumnWidth(6, 60);   // 启用
+    ui->tableWidget->setColumnWidth(1, 120);  // 目标仓库
+    ui->tableWidget->setColumnWidth(2, 200);  // 备份路径
+    ui->tableWidget->setColumnWidth(3, 100);  // 调度
+    ui->tableWidget->setColumnWidth(4, 80);   // 状态
+    ui->tableWidget->setColumnWidth(5, 120);  // 操作
 
-    // 让源路径列可以拉伸填充剩余空间
+    // 让备份路径列可以拉伸填充剩余空间
     ui->tableWidget->horizontalHeader()->setStretchLastSection(false);
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
@@ -40,6 +189,14 @@ BackupPage::BackupPage(QWidget* parent)
     connect(ui->toggleButton, &QPushButton::clicked, this, &BackupPage::onToggleTask);
     connect(ui->runButton, &QPushButton::clicked, this, &BackupPage::onRunTask);
     connect(ui->refreshButton, &QPushButton::clicked, this, &BackupPage::onRefresh);
+
+    // 连接表格选中信号
+    connect(ui->tableWidget, &QTableWidget::currentCellChanged,
+        [this](int currentRow, int currentColumn, int previousRow, int previousColumn) {
+            Q_UNUSED(currentColumn);
+            Q_UNUSED(previousColumn);
+            onTaskSelected(currentRow, previousRow);
+        });
 
     // 连接 BackupManager 信号，当备份完成时自动刷新任务列表
     Core::BackupManager* backupMgr = Core::BackupManager::instance();
@@ -102,7 +259,7 @@ void BackupPage::loadTasks()
         QTableWidgetItem* sourceItem = new QTableWidgetItem(sourcePath);
         ui->tableWidget->setItem(i, 2, sourceItem);
 
-        // 计划
+        // 调度
         QString schedule;
         switch (task.schedule.type) {
         case Models::Schedule::Manual:
@@ -133,24 +290,29 @@ void BackupPage::loadTasks()
         QTableWidgetItem* scheduleItem = new QTableWidgetItem(schedule);
         ui->tableWidget->setItem(i, 3, scheduleItem);
 
-        // 上次运行
-        QString lastRun = task.lastRun.isValid() ?
-            task.lastRun.toString("yyyy-MM-dd HH:mm") : tr("从未");
-        QTableWidgetItem* lastRunItem = new QTableWidgetItem(lastRun);
-        ui->tableWidget->setItem(i, 4, lastRunItem);
+        // 状态
+        QString status = task.enabled ? tr("启用") : tr("禁用");
+        QTableWidgetItem* statusItem = new QTableWidgetItem(status);
+        if (task.enabled) {
+            statusItem->setForeground(QColor(40, 167, 69)); // 绿色
+        } else {
+            statusItem->setForeground(QColor(108, 117, 125)); // 灰色
+        }
+        ui->tableWidget->setItem(i, 4, statusItem);
 
-        // 下次运行
-        QString nextRun = task.nextRun.isValid() ?
-            task.nextRun.toString("yyyy-MM-dd HH:mm") : tr("N/A");
-        QTableWidgetItem* nextRunItem = new QTableWidgetItem(nextRun);
-        ui->tableWidget->setItem(i, 5, nextRunItem);
-
-        // 启用状态
-        QTableWidgetItem* enabledItem = new QTableWidgetItem(task.enabled ? tr("是") : tr("否"));
-        ui->tableWidget->setItem(i, 6, enabledItem);
+        // 操作列（显示文本提示，实际操作在详情面板或顶部按钮）
+        QTableWidgetItem* actionItem = new QTableWidgetItem(tr("[详情]"));
+        actionItem->setForeground(QColor(0, 123, 255)); // 蓝色
+        actionItem->setTextAlignment(Qt::AlignCenter);
+        ui->tableWidget->setItem(i, 5, actionItem);
 
         // 存储任务ID
         nameItem->setData(Qt::UserRole, task.id);
+    }
+
+    // 清空详情显示
+    if (ui->tableWidget->rowCount() == 0) {
+        clearDetails();
     }
 }
 
@@ -468,6 +630,191 @@ void BackupPage::onPasswordError(int taskId, int repoId)
 
     Utils::Logger::instance()->log(Utils::Logger::Info,
         QString("已清除仓库 %1 的错误密码").arg(repo.name));
+}
+
+void BackupPage::onTaskSelected(int currentRow, int previousRow)
+{
+    Q_UNUSED(previousRow);
+
+    if (currentRow < 0) {
+        clearDetails();
+        return;
+    }
+
+    // 获取任务ID
+    QTableWidgetItem* nameItem = ui->tableWidget->item(currentRow, 0);
+    if (!nameItem) {
+        clearDetails();
+        return;
+    }
+
+    int taskId = nameItem->data(Qt::UserRole).toInt();
+
+    // 获取任务信息
+    Data::DatabaseManager* db = Data::DatabaseManager::instance();
+    QList<Models::BackupTask> tasks = db->getAllBackupTasks();
+
+    Models::BackupTask task;
+    bool found = false;
+    for (const auto& t : tasks) {
+        if (t.id == taskId) {
+            task = t;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        clearDetails();
+        return;
+    }
+
+    // 填充详情面板
+
+    // 任务名称
+    ui->detailNameLabel->setText(task.name);
+
+    // 目标仓库
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    Models::Repository repo = repoMgr->getRepository(task.repositoryId);
+    ui->detailRepoLabel->setText(repo.name);
+
+    // 备份路径
+    QString paths = task.sourcePaths.isEmpty() ? tr("无") : task.sourcePaths.join("\n");
+    ui->detailPathsLabel->setText(paths);
+
+    // 排除规则
+    QString excludes = task.excludePatterns.isEmpty() ? tr("无") : task.excludePatterns.join("\n");
+    ui->detailExcludesLabel->setText(excludes);
+
+    // 标签
+    QString tags = task.tags.isEmpty() ? tr("无") : task.tags.join(", ");
+    ui->detailTagsLabel->setText(tags);
+
+    // 调度设置
+    QString schedule;
+    switch (task.schedule.type) {
+    case Models::Schedule::Manual:
+        schedule = tr("手动");
+        break;
+    case Models::Schedule::Minutely:
+        schedule = tr("每分钟 %1").arg(task.schedule.time.toString("HH:mm"));
+        break;
+    case Models::Schedule::Hourly:
+        schedule = tr("每小时 %1 分").arg(task.schedule.time.minute());
+        break;
+    case Models::Schedule::Daily:
+        schedule = tr("每天 %1").arg(task.schedule.time.toString("HH:mm"));
+        break;
+    case Models::Schedule::Weekly:
+        schedule = tr("每周%1 %2").arg(task.schedule.dayOfWeek).arg(task.schedule.time.toString("HH:mm"));
+        break;
+    case Models::Schedule::Monthly:
+        schedule = tr("每月%1日 %2").arg(task.schedule.dayOfMonth).arg(task.schedule.time.toString("HH:mm"));
+        break;
+    case Models::Schedule::Custom:
+        schedule = tr("自定义");
+        break;
+    default:
+        schedule = tr("未设置");
+        break;
+    }
+    ui->detailScheduleLabel->setText(schedule);
+
+    // 上次执行
+    QString lastRun = task.lastRun.isValid() ?
+        task.lastRun.toString("yyyy-MM-dd HH:mm:ss") : tr("从未");
+    ui->detailLastRunLabel->setText(lastRun);
+
+    // 下次执行
+    QString nextRun = task.nextRun.isValid() ?
+        task.nextRun.toString("yyyy-MM-dd HH:mm:ss") : tr("N/A");
+    ui->detailNextRunLabel->setText(nextRun);
+
+    // 加载最近5次执行记录
+    ui->historyList->clear();
+    QList<Models::BackupResult> history = db->getBackupHistory(taskId, 5);
+
+    if (history.isEmpty()) {
+        QListWidgetItem* item = new QListWidgetItem(tr("暂无执行记录"));
+        item->setFlags(item->flags() & ~Qt::ItemIsSelectable);
+        ui->historyList->addItem(item);
+    } else {
+        for (const auto& result : history) {
+            QString statusText;
+            QString statusIcon;
+
+            // 根据状态设置图标和文本
+            switch (result.status) {
+            case Models::BackupStatus::Success:
+                statusText = tr("成功");
+                statusIcon = "[✓]";
+                break;
+            case Models::BackupStatus::Failed:
+                statusText = tr("失败");
+                statusIcon = "[✗]";
+                break;
+            case Models::BackupStatus::Running:
+                statusText = tr("运行中");
+                statusIcon = "[→]";
+                break;
+            case Models::BackupStatus::Cancelled:
+                statusText = tr("已取消");
+                statusIcon = "[!]";
+                break;
+            }
+
+            // 格式化数据大小
+            QString sizeText;
+            if (result.dataAdded >= 1024 * 1024 * 1024) {
+                sizeText = QString::number(result.dataAdded / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
+            } else if (result.dataAdded >= 1024 * 1024) {
+                sizeText = QString::number(result.dataAdded / (1024.0 * 1024.0), 'f', 2) + " MB";
+            } else if (result.dataAdded >= 1024) {
+                sizeText = QString::number(result.dataAdded / 1024.0, 'f', 2) + " KB";
+            } else {
+                sizeText = QString::number(result.dataAdded) + " B";
+            }
+
+            // 构建显示文本
+            QString displayText = QString("%1 %2 - %3\n    快照: %4 | 新增: %5个文件 | %6")
+                .arg(statusIcon)
+                .arg(statusText)
+                .arg(result.startTime.toString("yyyy-MM-dd HH:mm:ss"))
+                .arg(result.snapshotId.isEmpty() ? tr("无") : result.snapshotId.left(8))
+                .arg(result.filesNew)
+                .arg(sizeText);
+
+            // 如果失败，添加错误信息
+            if (result.status == Models::BackupStatus::Failed && !result.errorMessage.isEmpty()) {
+                displayText += QString("\n    错误: %1").arg(result.errorMessage);
+            }
+
+            QListWidgetItem* item = new QListWidgetItem(displayText);
+
+            // 根据状态设置颜色
+            if (result.status == Models::BackupStatus::Success) {
+                item->setForeground(QColor(0, 128, 0)); // 绿色
+            } else if (result.status == Models::BackupStatus::Failed) {
+                item->setForeground(QColor(200, 0, 0)); // 红色
+            }
+
+            ui->historyList->addItem(item);
+        }
+    }
+}
+
+void BackupPage::clearDetails()
+{
+    ui->detailNameLabel->setText("-");
+    ui->detailRepoLabel->setText("-");
+    ui->detailPathsLabel->setText("-");
+    ui->detailExcludesLabel->setText("-");
+    ui->detailTagsLabel->setText("-");
+    ui->detailScheduleLabel->setText("-");
+    ui->detailLastRunLabel->setText("-");
+    ui->detailNextRunLabel->setText("-");
+    ui->historyList->clear();
 }
 
 } // namespace UI
