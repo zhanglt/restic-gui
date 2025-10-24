@@ -7,6 +7,7 @@
 #include "../dialogs/SnapshotBrowserDialog.h"
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QHeaderView>
 #include <QtConcurrent>
 
 namespace ResticGUI {
@@ -21,6 +22,17 @@ SnapshotPage::SnapshotPage(QWidget* parent)
     , m_snapshotWatcher(nullptr)
 {
     ui->setupUi(this);
+
+    // 设置表格列宽
+    ui->tableWidget->setColumnWidth(0, 100);  // 快照ID
+    ui->tableWidget->setColumnWidth(1, 150);  // 时间
+    ui->tableWidget->setColumnWidth(2, 80);   // 主机名
+    ui->tableWidget->setColumnWidth(3, 250);  // 路径
+    ui->tableWidget->setColumnWidth(4, 120);  // 标签
+
+    // 让路径列可以拉伸填充剩余空间
+    ui->tableWidget->horizontalHeader()->setStretchLastSection(false);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
 
     // 初始化异步加载器
     m_snapshotWatcher = new QFutureWatcher<QList<Models::Snapshot>>(this);

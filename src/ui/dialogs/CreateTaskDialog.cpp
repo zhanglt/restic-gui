@@ -26,65 +26,65 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
     QFormLayout* formLayout = new QFormLayout();
 
     // 任务名称
-    QLineEdit* nameEdit = new QLineEdit(this);
-    formLayout->addRow(tr("任务名称:"), nameEdit);
+    m_nameEdit = new QLineEdit(this);
+    formLayout->addRow(tr("任务名称:"), m_nameEdit);
 
     // 选择仓库
-    QComboBox* repoComboBox = new QComboBox(this);
+    m_repoComboBox = new QComboBox(this);
     Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
     QList<Models::Repository> repositories = repoMgr->getAllRepositories();
 
     if (repositories.isEmpty()) {
-        repoComboBox->addItem(tr("(无可用仓库)"), 0);
-        repoComboBox->setEnabled(false);
+        m_repoComboBox->addItem(tr("(无可用仓库)"), 0);
+        m_repoComboBox->setEnabled(false);
     } else {
         for (const Models::Repository& repo : repositories) {
-            repoComboBox->addItem(repo.name, repo.id);
+            m_repoComboBox->addItem(repo.name, repo.id);
         }
     }
-    formLayout->addRow(tr("目标仓库:"), repoComboBox);
+    formLayout->addRow(tr("目标仓库:"), m_repoComboBox);
 
     // 源路径（简化版，只支持单个路径）
-    QLineEdit* pathEdit = new QLineEdit(this);
+    m_pathEdit = new QLineEdit(this);
     QPushButton* browseButton = new QPushButton(tr("浏览..."), this);
     QHBoxLayout* pathLayout = new QHBoxLayout();
-    pathLayout->addWidget(pathEdit);
+    pathLayout->addWidget(m_pathEdit);
     pathLayout->addWidget(browseButton);
     formLayout->addRow(tr("备份路径:"), pathLayout);
 
-    connect(browseButton, &QPushButton::clicked, this, [=]() {
+    connect(browseButton, &QPushButton::clicked, this, [this]() {
         QString dir = QFileDialog::getExistingDirectory(this, tr("选择备份目录"));
         if (!dir.isEmpty()) {
-            pathEdit->setText(dir);
+            m_pathEdit->setText(dir);
         }
     });
 
     // 计划类型
-    QComboBox* scheduleComboBox = new QComboBox(this);
-    scheduleComboBox->addItem(tr("手动"), static_cast<int>(Models::Schedule::Manual));
-    scheduleComboBox->addItem(tr("每分钟"), static_cast<int>(Models::Schedule::Minutely));
-    scheduleComboBox->addItem(tr("每小时"), static_cast<int>(Models::Schedule::Hourly));
-    scheduleComboBox->addItem(tr("每天"), static_cast<int>(Models::Schedule::Daily));
-    scheduleComboBox->addItem(tr("每周"), static_cast<int>(Models::Schedule::Weekly));
-    scheduleComboBox->addItem(tr("每月"), static_cast<int>(Models::Schedule::Monthly));
-    formLayout->addRow(tr("计划:"), scheduleComboBox);
+    m_scheduleComboBox = new QComboBox(this);
+    m_scheduleComboBox->addItem(tr("手动"), static_cast<int>(Models::Schedule::Manual));
+    m_scheduleComboBox->addItem(tr("每分钟"), static_cast<int>(Models::Schedule::Minutely));
+    m_scheduleComboBox->addItem(tr("每小时"), static_cast<int>(Models::Schedule::Hourly));
+    m_scheduleComboBox->addItem(tr("每天"), static_cast<int>(Models::Schedule::Daily));
+    m_scheduleComboBox->addItem(tr("每周"), static_cast<int>(Models::Schedule::Weekly));
+    m_scheduleComboBox->addItem(tr("每月"), static_cast<int>(Models::Schedule::Monthly));
+    formLayout->addRow(tr("计划:"), m_scheduleComboBox);
 
     mainLayout->addLayout(formLayout);
 
     // 按钮
     QDialogButtonBox* buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    connect(buttonBox, &QDialogButtonBox::accepted, this, [=]() {
+    connect(buttonBox, &QDialogButtonBox::accepted, this, [this]() {
         Utils::Logger::instance()->log(Utils::Logger::Debug, "CreateTaskDialog: 点击确定按钮");
 
         // 验证输入
-        if (nameEdit->text().isEmpty()) {
+        if (m_nameEdit->text().isEmpty()) {
             Utils::Logger::instance()->log(Utils::Logger::Warning, "任务名称为空");
             QMessageBox::warning(this, tr("警告"), tr("请输入任务名称"));
             return;
         }
 
-        int repoId = repoComboBox->currentData().toInt();
+        int repoId = m_repoComboBox->currentData().toInt();
         Utils::Logger::instance()->log(Utils::Logger::Debug,
             QString("选中的仓库ID: %1").arg(repoId));
 
@@ -94,25 +94,25 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
             return;
         }
 
-        if (pathEdit->text().isEmpty()) {
+        if (m_pathEdit->text().isEmpty()) {
             Utils::Logger::instance()->log(Utils::Logger::Warning, "备份路径为空");
             QMessageBox::warning(this, tr("警告"), tr("请选择备份路径"));
             return;
         }
 
         // 填充任务信息
-        m_task.name = nameEdit->text();
+        m_task.name = m_nameEdit->text();
         m_task.repositoryId = repoId;
         m_task.sourcePaths.clear();
-        m_task.sourcePaths.append(pathEdit->text());
-        m_task.schedule.type = static_cast<Models::Schedule::Type>(scheduleComboBox->currentData().toInt());
+        m_task.sourcePaths.append(m_pathEdit->text());
+        m_task.schedule.type = static_cast<Models::Schedule::Type>(m_scheduleComboBox->currentData().toInt());
         m_task.enabled = true;
 
         Utils::Logger::instance()->log(Utils::Logger::Info,
             QString("创建任务对话框完成: name=%1, repoId=%2, path=%3, scheduleType=%4")
                 .arg(m_task.name)
                 .arg(m_task.repositoryId)
-                .arg(pathEdit->text())
+                .arg(m_pathEdit->text())
                 .arg(static_cast<int>(m_task.schedule.type)));
 
         accept();
@@ -134,7 +134,37 @@ Models::BackupTask CreateTaskDialog::getTask() const
 void CreateTaskDialog::setTask(const Models::BackupTask& task)
 {
     m_task = task;
-    // TODO: 填充界面控件
+
+    // 填充任务名称
+    m_nameEdit->setText(task.name);
+
+    // 设置仓库选择
+    for (int i = 0; i < m_repoComboBox->count(); ++i) {
+        if (m_repoComboBox->itemData(i).toInt() == task.repositoryId) {
+            m_repoComboBox->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    // 设置备份路径（只显示第一个路径）
+    if (!task.sourcePaths.isEmpty()) {
+        m_pathEdit->setText(task.sourcePaths.first());
+    }
+
+    // 设置计划类型
+    for (int i = 0; i < m_scheduleComboBox->count(); ++i) {
+        if (m_scheduleComboBox->itemData(i).toInt() == static_cast<int>(task.schedule.type)) {
+            m_scheduleComboBox->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("已填充任务数据到对话框: name=%1, repoId=%2, path=%3, scheduleType=%4")
+            .arg(task.name)
+            .arg(task.repositoryId)
+            .arg(task.sourcePaths.isEmpty() ? "" : task.sourcePaths.first())
+            .arg(static_cast<int>(task.schedule.type)));
 }
 
 } // namespace UI

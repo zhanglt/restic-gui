@@ -1,6 +1,7 @@
 #include "RepositoryPage.h"
 #include "ui_RepositoryPage.h"
 #include "../../core/RepositoryManager.h"
+#include "../../core/BackupManager.h"
 #include "../../core/ResticWrapper.h"
 #include "../../data/PasswordManager.h"
 #include "../wizards/CreateRepoWizard.h"
@@ -8,6 +9,7 @@
 #include "../dialogs/PruneOptionsDialog.h"
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QHeaderView>
 #include <QApplication>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrent>
@@ -30,6 +32,17 @@ RepositoryPage::RepositoryPage(QWidget* parent)
 {
     ui->setupUi(this);
 
+    // 设置表格列宽
+    ui->tableWidget->setColumnWidth(0, 120);  // 名称
+    ui->tableWidget->setColumnWidth(1, 80);   // 类型
+    ui->tableWidget->setColumnWidth(2, 250);  // 路径
+    ui->tableWidget->setColumnWidth(3, 150);  // 最后备份
+    ui->tableWidget->setColumnWidth(4, 60);   // 默认
+
+    // 让路径列可以拉伸填充剩余空间
+    ui->tableWidget->horizontalHeader()->setStretchLastSection(false);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+
     // 连接信号
     connect(ui->createButton, &QPushButton::clicked, this, &RepositoryPage::onCreateRepository);
     connect(ui->editButton, &QPushButton::clicked, this, &RepositoryPage::onEditRepository);
@@ -38,6 +51,16 @@ RepositoryPage::RepositoryPage(QWidget* parent)
     connect(ui->checkButton, &QPushButton::clicked, this, &RepositoryPage::onCheckRepository);
     connect(ui->unlockButton, &QPushButton::clicked, this, &RepositoryPage::onUnlockRepository);
     connect(ui->pruneButton, &QPushButton::clicked, this, &RepositoryPage::onPruneRepository);
+
+    // 连接 BackupManager 的信号，当备份完成时自动刷新仓库列表
+    Core::BackupManager* backupMgr = Core::BackupManager::instance();
+    connect(backupMgr, &Core::BackupManager::backupFinished, this, [this](int taskId, bool success) {
+        Q_UNUSED(taskId);
+        if (success) {
+            // 备份成功后刷新仓库列表，以更新"最后备份"列
+            loadRepositories();
+        }
+    });
 
     // 创建进度更新定时器
     m_progressTimer = new QTimer(this);

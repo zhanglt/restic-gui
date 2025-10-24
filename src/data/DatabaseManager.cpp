@@ -552,6 +552,13 @@ bool DatabaseManager::updateBackupTask(const Models::BackupTask& task)
     query.bindValue(":next_run", task.nextRun.isValid() ? task.nextRun.toString(Qt::ISODate) : QVariant());
     query.bindValue(":updated_at", QDateTime::currentDateTime().toString(Qt::ISODate));
 
+    // 添加调试日志
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("updateBackupTask: 任务ID=%1, enabled=%2 (数据库值=%3)")
+            .arg(task.id)
+            .arg(task.enabled ? "true" : "false")
+            .arg(task.enabled ? 1 : 0));
+
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         Utils::Logger::instance()->log(Utils::Logger::Error,
@@ -668,6 +675,14 @@ QList<Models::BackupTask> DatabaseManager::getAllBackupTasks()
         }
 
         task.enabled = query.value("enabled").toInt() == 1;
+
+        // 添加调试日志
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("getAllBackupTasks: 任务 \"%1\" (ID: %2) 从数据库读取 enabled=%3 (原始值=%4)")
+                .arg(task.name)
+                .arg(task.id)
+                .arg(task.enabled ? "true" : "false")
+                .arg(query.value("enabled").toInt()));
 
         // 读取 last_run 和 next_run
         QString lastRunStr = query.value("last_run").toString();

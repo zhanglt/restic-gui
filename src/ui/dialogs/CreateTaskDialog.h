@@ -4,6 +4,9 @@
 #include <QDialog>
 #include "../../models/BackupTask.h"
 
+class QLineEdit;
+class QComboBox;
+
 namespace ResticGUI {
 namespace UI {
 
@@ -23,6 +26,12 @@ public:
 
 private:
     Models::BackupTask m_task;
+
+    // UI 控件
+    QLineEdit* m_nameEdit;
+    QComboBox* m_repoComboBox;
+    QLineEdit* m_pathEdit;
+    QComboBox* m_scheduleComboBox;
 };
 
 } // namespace UI

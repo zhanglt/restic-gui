@@ -88,6 +88,12 @@
      <property name="selectionBehavior">
       <enum>QAbstractItemView::SelectRows</enum>
      </property>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="horizontalHeaderDefaultSectionSize">
+      <number>100</number>
+     </attribute>
      <column>
       <property name="text">
        <string>名称</string>

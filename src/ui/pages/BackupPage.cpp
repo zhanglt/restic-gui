@@ -9,6 +9,7 @@
 #include "../../utils/Logger.h"
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QHeaderView>
 
 namespace ResticGUI {
 namespace UI {
@@ -18,6 +19,19 @@ BackupPage::BackupPage(QWidget* parent)
     , ui(new Ui::BackupPage)
 {
     ui->setupUi(this);
+
+    // 设置表格列宽
+    ui->tableWidget->setColumnWidth(0, 150);  // 任务名称
+    ui->tableWidget->setColumnWidth(1, 120);  // 仓库
+    ui->tableWidget->setColumnWidth(2, 200);  // 源路径
+    ui->tableWidget->setColumnWidth(3, 80);   // 计划
+    ui->tableWidget->setColumnWidth(4, 140);  // 上次运行
+    ui->tableWidget->setColumnWidth(5, 140);  // 下次运行
+    ui->tableWidget->setColumnWidth(6, 60);   // 启用
+
+    // 让源路径列可以拉伸填充剩余空间
+    ui->tableWidget->horizontalHeader()->setStretchLastSection(false);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
     // 连接信号
     connect(ui->createButton, &QPushButton::clicked, this, &BackupPage::onCreateTask);
@@ -52,6 +66,10 @@ void BackupPage::loadTasks()
     Data::DatabaseManager* db = Data::DatabaseManager::instance();
     QList<Models::BackupTask> tasks = db->getAllBackupTasks();
 
+    // 添加调试日志
+    Utils::Logger::instance()->log(Utils::Logger::Debug,
+        QString("BackupPage: 加载了 %1 个任务").arg(tasks.size()));
+
     // 清空表格
     ui->tableWidget->setRowCount(0);
     ui->tableWidget->setRowCount(tasks.size());
@@ -59,6 +77,13 @@ void BackupPage::loadTasks()
     // 填充表格数据
     for (int i = 0; i < tasks.size(); ++i) {
         const Models::BackupTask& task = tasks[i];
+
+        // 添加调试日志
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("BackupPage: 任务 \"%1\" (ID: %2) enabled=%3")
+                .arg(task.name)
+                .arg(task.id)
+                .arg(task.enabled ? "true" : "false"));
 
         // 任务名称
         QTableWidgetItem* nameItem = new QTableWidgetItem(task.name);

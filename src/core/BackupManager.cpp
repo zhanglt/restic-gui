@@ -202,6 +202,14 @@ bool BackupManager::runBackupTask(int taskId)
 
         if (success) {
             Utils::Logger::instance()->log(Utils::Logger::Info, "备份任务完成");
+
+            // 更新仓库的最后备份时间
+            Models::Repository updatedRepo = repo;
+            updatedRepo.lastBackup = QDateTime::currentDateTime();
+            RepositoryManager::instance()->updateRepository(updatedRepo);
+
+            Utils::Logger::instance()->log(Utils::Logger::Debug,
+                QString("已更新仓库 \"%1\" 的最后备份时间").arg(repo.name));
         } else {
             Utils::Logger::instance()->log(Utils::Logger::Error, "备份任务失败");
 
@@ -253,6 +261,16 @@ bool BackupManager::runBackupNow(int repoId, const QStringList& sourcePaths,
                                   excludePatterns, tags, result);
 
     m_running = false;
+
+    // 如果备份成功，更新仓库的最后备份时间
+    if (success) {
+        Models::Repository updatedRepo = repo;
+        updatedRepo.lastBackup = QDateTime::currentDateTime();
+        RepositoryManager::instance()->updateRepository(updatedRepo);
+
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("已更新仓库 \"%1\" 的最后备份时间").arg(repo.name));
+    }
 
     return success;
 }

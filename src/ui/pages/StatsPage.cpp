@@ -4,6 +4,7 @@
 #include "../../core/SnapshotManager.h"
 #include "../../data/DatabaseManager.h"
 #include "../../data/PasswordManager.h"
+#include "../../utils/Logger.h"
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QShowEvent>
@@ -76,6 +77,13 @@ void StatsPage::loadStats()
 
     int enabledTasks = 0;
     for (const auto& task : tasks) {
+        // 添加调试日志
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("任务 \"%1\" (ID: %2) enabled字段值: %3")
+                .arg(task.name)
+                .arg(task.id)
+                .arg(task.enabled ? "true" : "false"));
+
         if (task.enabled) enabledTasks++;
     }
 
