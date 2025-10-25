@@ -6,6 +6,7 @@
 
 class QLineEdit;
 class QComboBox;
+class QLabel;
 
 namespace ResticGUI {
 namespace UI {

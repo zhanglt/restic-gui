@@ -179,14 +179,17 @@ RestorePage::RestorePage(QWidget* parent)
     ui->snapshotTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->snapshotTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->snapshotTable->setAlternatingRowColors(true);
-    ui->snapshotTable->horizontalHeader()->setStretchLastSection(true);
+    ui->snapshotTable->horizontalHeader()->setStretchLastSection(false);
 
-    // 设置列宽
-    ui->snapshotTable->setColumnWidth(0, 150);  // 快照ID
-    ui->snapshotTable->setColumnWidth(1, 150);  // 创建时间
-    ui->snapshotTable->setColumnWidth(2, 120);  // 主机名
-    ui->snapshotTable->setColumnWidth(3, 200);  // 路径
+    // 设置列宽和调整模式
+    ui->snapshotTable->setColumnWidth(0, 100);  // 快照ID（显示前8位）
+    ui->snapshotTable->setColumnWidth(1, 160);  // 创建时间
+    ui->snapshotTable->setColumnWidth(2, 100);  // 主机名
     ui->snapshotTable->setColumnWidth(4, 100);  // 大小
+    ui->snapshotTable->setColumnWidth(5, 120);  // 标签
+
+    // 路径列使用拉伸模式，占据剩余空间
+    ui->snapshotTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
 
     // 初始化异步加载器
     m_snapshotWatcher = new QFutureWatcher<QList<Models::Snapshot>>(this);
@@ -561,9 +564,6 @@ void RestorePage::displaySnapshots(const QList<Models::Snapshot>& snapshots)
         QTableWidgetItem* tagsItem = new QTableWidgetItem(snapshot.tags.join(", "));
         ui->snapshotTable->setItem(i, 5, tagsItem);
     }
-
-    // 调整列宽以适应内容
-    ui->snapshotTable->resizeColumnsToContents();
 }
 
 void RestorePage::showLoadingIndicator(bool show)

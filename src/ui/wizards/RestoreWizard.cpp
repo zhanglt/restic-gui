@@ -37,9 +37,13 @@ RestoreWizard::RestoreWizard(QWidget* parent)
     setOption(QWizard::HaveHelpButton, false);
     setOption(QWizard::NoBackButtonOnStartPage, true);
 
+    // 设置窗口大小
+    setMinimumSize(800, 650);
+    resize(900, 700);
+
     // 设置按钮文本为中文
-    setButtonText(QWizard::NextButton, tr("下一步 >"));
-    setButtonText(QWizard::BackButton, tr("< 上一步"));
+    setButtonText(QWizard::NextButton, tr("下一步"));
+    setButtonText(QWizard::BackButton, tr("上一步"));
     setButtonText(QWizard::FinishButton, tr("完成"));
     setButtonText(QWizard::CancelButton, tr("取消"));
 
@@ -51,7 +55,70 @@ RestoreWizard::RestoreWizard(QWidget* parent)
 
     setStartId(Page_SnapshotSelection);
 
-    resize(900, 700);
+    // 应用整体样式
+    setStyleSheet(
+        // 向导页面样式
+        "QWizard {"
+        "    background-color: #F5F5F5;"
+        "}"
+        "QWizardPage {"
+        "    background-color: white;"
+        "}"
+
+        // 向导按钮样式
+        "QWizard QPushButton {"
+        "    min-width: 70px;"
+        "    min-height: 28px;"
+        "    padding: 4px 12px;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "}"
+
+        // 下一步和完成按钮
+        "QWizard QPushButton[text=\"下一步\"], "
+        "QWizard QPushButton[text=\"完成\"] {"
+        "    background-color: #4A90E2;"
+        "    color: white;"
+        "    border: 1px solid #4A90E2;"
+        "    font-weight: bold;"
+        "}"
+        "QWizard QPushButton[text=\"下一步\"]:hover, "
+        "QWizard QPushButton[text=\"完成\"]:hover {"
+        "    background-color: #357ABD;"
+        "    border-color: #357ABD;"
+        "}"
+        "QWizard QPushButton[text=\"下一步\"]:pressed, "
+        "QWizard QPushButton[text=\"完成\"]:pressed {"
+        "    background-color: #2E6BA8;"
+        "}"
+        "QWizard QPushButton[text=\"下一步\"]:disabled, "
+        "QWizard QPushButton[text=\"完成\"]:disabled {"
+        "    background-color: #CCCCCC;"
+        "    border-color: #CCCCCC;"
+        "    color: #888888;"
+        "}"
+
+        // 上一步按钮
+        "QWizard QPushButton[text=\"上一步\"] {"
+        "    background-color: white;"
+        "    color: #4A90E2;"
+        "    border: 1px solid #4A90E2;"
+        "}"
+        "QWizard QPushButton[text=\"上一步\"]:hover {"
+        "    background-color: #F0F8FF;"
+        "}"
+
+        // 取消按钮
+        "QWizard QPushButton[text=\"取消\"] {"
+        "    background-color: white;"
+        "    color: #666666;"
+        "    border: 1px solid #CCCCCC;"
+        "}"
+        "QWizard QPushButton[text=\"取消\"]:hover {"
+        "    background-color: #F5F5F5;"
+        "    border-color: #999999;"
+        "}"
+    );
 }
 
 RestoreWizard::~RestoreWizard()
@@ -129,17 +196,74 @@ SnapshotSelectionPage::SnapshotSelectionPage(QWidget* parent)
     setSubTitle(tr("请选择要恢复的仓库和快照"));
 
     QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setSpacing(15);
+    layout->setContentsMargins(20, 20, 20, 20);
 
     // 提示信息
     m_infoLabel = new QLabel(tr("请先选择一个仓库，然后从列表中选择要恢复的快照"), this);
     m_infoLabel->setWordWrap(true);
+    m_infoLabel->setStyleSheet("QLabel { font-size: 10pt; color: #555555; padding: 8px; }");
     layout->addWidget(m_infoLabel);
 
     // 仓库选择行
     QHBoxLayout* repoLayout = new QHBoxLayout();
+    repoLayout->setSpacing(10);
+
     QLabel* repoLabel = new QLabel(tr("仓库:"), this);
+    repoLabel->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #333333; }");
+
     m_repositoryComboBox = new QComboBox(this);
+    m_repositoryComboBox->setMinimumHeight(28);
+    m_repositoryComboBox->setStyleSheet(
+        "QComboBox {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QComboBox:hover {"
+        "    border-color: #A0A0A0;"
+        "}"
+        "QComboBox:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "}"
+        "QComboBox::drop-down {"
+        "    border: none;"
+        "    width: 25px;"
+        "}"
+        "QComboBox::down-arrow {"
+        "    image: none;"
+        "    border-left: 4px solid transparent;"
+        "    border-right: 4px solid transparent;"
+        "    border-top: 5px solid #666666;"
+        "    margin-right: 6px;"
+        "}"
+    );
+
     m_refreshButton = new QPushButton(tr("刷新"), this);
+    m_refreshButton->setMinimumHeight(28);
+    m_refreshButton->setMinimumWidth(70);
+    m_refreshButton->setCursor(Qt::PointingHandCursor);
+    m_refreshButton->setStyleSheet(
+        "QPushButton {"
+        "    padding: 5px 14px;"
+        "    border: 1px solid #4A90E2;"
+        "    border-radius: 4px;"
+        "    background-color: white;"
+        "    color: #4A90E2;"
+        "    font-size: 10pt;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #4A90E2;"
+        "    color: white;"
+        "}"
+        "QPushButton:pressed {"
+        "    background-color: #357ABD;"
+        "}"
+    );
+
     repoLayout->addWidget(repoLabel);
     repoLayout->addWidget(m_repositoryComboBox, 1);
     repoLayout->addWidget(m_refreshButton);
@@ -161,6 +285,32 @@ SnapshotSelectionPage::SnapshotSelectionPage(QWidget* parent)
     m_snapshotTable->setColumnWidth(2, 120);
     m_snapshotTable->setColumnWidth(3, 200);
     m_snapshotTable->setColumnWidth(4, 100);
+    m_snapshotTable->setStyleSheet(
+        "QTableWidget {"
+        "    border: 1px solid #E0E0E0;"
+        "    border-radius: 4px;"
+        "    background-color: white;"
+        "    gridline-color: #F0F0F0;"
+        "    selection-background-color: #E3F2FD;"
+        "    selection-color: #1976D2;"
+        "}"
+        "QTableWidget::item {"
+        "    padding: 5px;"
+        "}"
+        "QTableWidget::item:selected {"
+        "    background-color: #E3F2FD;"
+        "    color: #1976D2;"
+        "}"
+        "QHeaderView::section {"
+        "    background-color: #F5F5F5;"
+        "    padding: 8px;"
+        "    border: none;"
+        "    border-bottom: 2px solid #E0E0E0;"
+        "    font-weight: bold;"
+        "    font-size: 10pt;"
+        "    color: #333333;"
+        "}"
+    );
     layout->addWidget(m_snapshotTable);
 
     // 注册字段
@@ -416,21 +566,51 @@ FileSelectionPage::FileSelectionPage(QWidget* parent)
     setSubTitle(tr("请勾选要恢复的文件和目录"));
 
     QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setSpacing(15);
+    layout->setContentsMargins(20, 20, 20, 20);
 
     // 快照信息标签
     QLabel* infoLabel = new QLabel(this);
     infoLabel->setObjectName("snapshotInfoLabel");
     infoLabel->setWordWrap(true);
-    QFont boldFont = infoLabel->font();
-    boldFont.setBold(true);
-    infoLabel->setFont(boldFont);
+    infoLabel->setStyleSheet(
+        "QLabel {"
+        "    font-size: 10pt;"
+        "    font-weight: bold;"
+        "    color: #1976D2;"
+        "    background-color: #E3F2FD;"
+        "    padding: 10px;"
+        "    border-radius: 4px;"
+        "    border-left: 4px solid #1976D2;"
+        "}"
+    );
     layout->addWidget(infoLabel);
 
     // 搜索框
     QHBoxLayout* searchLayout = new QHBoxLayout();
+    searchLayout->setSpacing(10);
+
     QLabel* searchLabel = new QLabel(tr("搜索:"), this);
+    searchLabel->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #333333; }");
+
     m_searchEdit = new QLineEdit(this);
     m_searchEdit->setPlaceholderText(tr("输入文件名或路径..."));
+    m_searchEdit->setMinimumHeight(28);
+    m_searchEdit->setStyleSheet(
+        "QLineEdit {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QLineEdit:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "    background-color: #F8FCFF;"
+        "}"
+    );
+
     searchLayout->addWidget(searchLabel);
     searchLayout->addWidget(m_searchEdit);
     layout->addLayout(searchLayout);
@@ -445,23 +625,83 @@ FileSelectionPage::FileSelectionPage(QWidget* parent)
     m_treeWidget->setRootIsDecorated(true);
     m_treeWidget->setAlternatingRowColors(true);
     m_treeWidget->setSortingEnabled(false);
+    m_treeWidget->setStyleSheet(
+        "QTreeWidget {"
+        "    border: 1px solid #E0E0E0;"
+        "    border-radius: 4px;"
+        "    background-color: white;"
+        "    alternate-background-color: #FAFAFA;"
+        "}"
+        "QTreeWidget::item {"
+        "    padding: 3px;"
+        "}"
+        "QTreeWidget::item:selected {"
+        "    background-color: #E3F2FD;"
+        "    color: #1976D2;"
+        "}"
+        "QHeaderView::section {"
+        "    background-color: #F5F5F5;"
+        "    padding: 8px;"
+        "    border: none;"
+        "    border-bottom: 2px solid #E0E0E0;"
+        "    font-weight: bold;"
+        "    font-size: 10pt;"
+        "    color: #333333;"
+        "}"
+    );
     layout->addWidget(m_treeWidget);
 
     // 状态栏和选择统计
     QHBoxLayout* statsLayout = new QHBoxLayout();
     m_statusLabel = new QLabel(tr("准备加载..."), this);
+    m_statusLabel->setStyleSheet("QLabel { font-size: 9pt; color: #666666; }");
+
     m_selectionLabel = new QLabel(tr("已选择: 0个文件，0个文件夹 | 总大小: 0 B"), this);
+    m_selectionLabel->setStyleSheet("QLabel { font-size: 9pt; color: #1976D2; font-weight: bold; }");
+
     statsLayout->addWidget(m_statusLabel);
     statsLayout->addStretch();
     statsLayout->addWidget(m_selectionLabel);
     layout->addLayout(statsLayout);
 
     // 操作按钮行
+    QString buttonStyle =
+        "QPushButton {"
+        "    padding: 5px 12px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    background-color: white;"
+        "    color: #555555;"
+        "    font-size: 9pt;"
+        "    min-height: 26px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #F5F5F5;"
+        "    border-color: #A0A0A0;"
+        "}"
+        "QPushButton:pressed {"
+        "    background-color: #E0E0E0;"
+        "}";
+
     QHBoxLayout* actionLayout = new QHBoxLayout();
+    actionLayout->setSpacing(8);
+
     m_selectAllButton = new QPushButton(tr("全选"), this);
+    m_selectAllButton->setCursor(Qt::PointingHandCursor);
+    m_selectAllButton->setStyleSheet(buttonStyle);
+
     m_selectNoneButton = new QPushButton(tr("全不选"), this);
+    m_selectNoneButton->setCursor(Qt::PointingHandCursor);
+    m_selectNoneButton->setStyleSheet(buttonStyle);
+
     m_expandAllButton = new QPushButton(tr("展开全部"), this);
+    m_expandAllButton->setCursor(Qt::PointingHandCursor);
+    m_expandAllButton->setStyleSheet(buttonStyle);
+
     m_collapseAllButton = new QPushButton(tr("折叠全部"), this);
+    m_collapseAllButton->setCursor(Qt::PointingHandCursor);
+    m_collapseAllButton->setStyleSheet(buttonStyle);
+
     actionLayout->addWidget(m_selectAllButton);
     actionLayout->addWidget(m_selectNoneButton);
     actionLayout->addWidget(m_expandAllButton);
@@ -860,16 +1100,78 @@ RestoreOptionsPage::RestoreOptionsPage(QWidget* parent)
     setSubTitle(tr("设置恢复目标路径和其他选项"));
 
     QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setSpacing(20);
+    layout->setContentsMargins(20, 20, 20, 20);
 
     // 目标路径
     QGroupBox* targetGroup = new QGroupBox(tr("恢复目标"), this);
+    targetGroup->setStyleSheet(
+        "QGroupBox {"
+        "    font-size: 11pt;"
+        "    font-weight: bold;"
+        "    color: #333333;"
+        "    border: 2px solid #E0E0E0;"
+        "    border-radius: 6px;"
+        "    margin-top: 12px;"
+        "    padding-top: 15px;"
+        "}"
+        "QGroupBox::title {"
+        "    subcontrol-origin: margin;"
+        "    left: 15px;"
+        "    padding: 0 8px;"
+        "    background-color: white;"
+        "}"
+    );
+
     QVBoxLayout* targetLayout = new QVBoxLayout(targetGroup);
+    targetLayout->setSpacing(12);
 
     QHBoxLayout* pathLayout = new QHBoxLayout();
+    pathLayout->setSpacing(10);
+
     QLabel* pathLabel = new QLabel(tr("恢复到:"), this);
+    pathLabel->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #555555; }");
+
     m_targetPathEdit = new QLineEdit(this);
     m_targetPathEdit->setPlaceholderText(tr("选择恢复目标路径"));
+    m_targetPathEdit->setMinimumHeight(28);
+    m_targetPathEdit->setStyleSheet(
+        "QLineEdit {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QLineEdit:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "    background-color: #F8FCFF;"
+        "}"
+    );
+
     m_browseButton = new QPushButton(tr("浏览..."), this);
+    m_browseButton->setMinimumHeight(28);
+    m_browseButton->setMinimumWidth(70);
+    m_browseButton->setCursor(Qt::PointingHandCursor);
+    m_browseButton->setStyleSheet(
+        "QPushButton {"
+        "    padding: 5px 14px;"
+        "    border: 1px solid #4A90E2;"
+        "    border-radius: 4px;"
+        "    background-color: white;"
+        "    color: #4A90E2;"
+        "    font-size: 10pt;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #4A90E2;"
+        "    color: white;"
+        "}"
+        "QPushButton:pressed {"
+        "    background-color: #357ABD;"
+        "}"
+    );
+
     pathLayout->addWidget(pathLabel);
     pathLayout->addWidget(m_targetPathEdit, 1);
     pathLayout->addWidget(m_browseButton);
@@ -879,28 +1181,98 @@ RestoreOptionsPage::RestoreOptionsPage(QWidget* parent)
 
     // 其他选项
     QGroupBox* optionsGroup = new QGroupBox(tr("其他选项"), this);
+    optionsGroup->setStyleSheet(
+        "QGroupBox {"
+        "    font-size: 11pt;"
+        "    font-weight: bold;"
+        "    color: #333333;"
+        "    border: 2px solid #E0E0E0;"
+        "    border-radius: 6px;"
+        "    margin-top: 12px;"
+        "    padding-top: 15px;"
+        "}"
+        "QGroupBox::title {"
+        "    subcontrol-origin: margin;"
+        "    left: 15px;"
+        "    padding: 0 8px;"
+        "    background-color: white;"
+        "}"
+    );
+
     QVBoxLayout* optionsLayout = new QVBoxLayout(optionsGroup);
+    optionsLayout->setSpacing(12);
+
+    QString checkBoxStyle =
+        "QCheckBox {"
+        "    font-size: 10pt;"
+        "    color: #555555;"
+        "    spacing: 8px;"
+        "}"
+        "QCheckBox::indicator {"
+        "    width: 16px;"
+        "    height: 16px;"
+        "    border: 2px solid #D0D0D0;"
+        "    border-radius: 3px;"
+        "    background-color: white;"
+        "}"
+        "QCheckBox::indicator:hover {"
+        "    border-color: #4A90E2;"
+        "}"
+        "QCheckBox::indicator:checked {"
+        "    background-color: #4A90E2;"
+        "    border-color: #4A90E2;"
+        "    image: none;"
+        "}"
+        "QCheckBox::indicator:checked {"
+        "    background-color: #4A90E2;"
+        "}";
 
     // 包含特定文件/目录（附加）
     QHBoxLayout* includeLayout = new QHBoxLayout();
+    includeLayout->setSpacing(10);
+
     m_includeCheckBox = new QCheckBox(tr("包含特定文件/目录（附加）"), this);
+    m_includeCheckBox->setStyleSheet(checkBoxStyle);
+
     m_includeEdit = new QLineEdit(this);
     m_includeEdit->setEnabled(false);
     m_includeEdit->setPlaceholderText(tr("输入额外的包含路径（用分号分隔）"));
+    m_includeEdit->setMinimumHeight(28);
+    m_includeEdit->setStyleSheet(
+        "QLineEdit {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QLineEdit:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "}"
+        "QLineEdit:disabled {"
+        "    background-color: #F5F5F5;"
+        "    color: #999999;"
+        "}"
+    );
+
     includeLayout->addWidget(m_includeCheckBox);
     includeLayout->addWidget(m_includeEdit, 1);
     optionsLayout->addLayout(includeLayout);
 
     m_restorePermissionsCheckBox = new QCheckBox(tr("恢复文件权限"), this);
     m_restorePermissionsCheckBox->setChecked(true);
+    m_restorePermissionsCheckBox->setStyleSheet(checkBoxStyle);
     optionsLayout->addWidget(m_restorePermissionsCheckBox);
 
     m_restoreTimestampsCheckBox = new QCheckBox(tr("恢复文件时间戳"), this);
     m_restoreTimestampsCheckBox->setChecked(true);
+    m_restoreTimestampsCheckBox->setStyleSheet(checkBoxStyle);
     optionsLayout->addWidget(m_restoreTimestampsCheckBox);
 
     m_verifyCheckBox = new QCheckBox(tr("恢复后验证数据完整性"), this);
     m_verifyCheckBox->setChecked(false);
+    m_verifyCheckBox->setStyleSheet(checkBoxStyle);
     optionsLayout->addWidget(m_verifyCheckBox);
 
     layout->addWidget(optionsGroup);
@@ -1003,20 +1375,54 @@ RestoreConfirmPage::RestoreConfirmPage(QWidget* parent)
     setSubTitle(tr("请确认以下信息，然后点击\"完成\"开始恢复"));
 
     QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setSpacing(15);
+    layout->setContentsMargins(20, 20, 20, 20);
 
     QLabel* label = new QLabel(tr("即将执行以下恢复操作："), this);
+    label->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #333333; }");
     layout->addWidget(label);
 
     m_summaryText = new QTextEdit(this);
     m_summaryText->setReadOnly(true);
+    m_summaryText->setStyleSheet(
+        "QTextEdit {"
+        "    border: 1px solid #E0E0E0;"
+        "    border-radius: 4px;"
+        "    background-color: #FAFAFA;"
+        "    padding: 15px;"
+        "    font-size: 10pt;"
+        "    font-family: 'Courier New', monospace;"
+        "    line-height: 1.5;"
+        "}"
+    );
     layout->addWidget(m_summaryText);
 
+    // 警告区域
+    QWidget* warningWidget = new QWidget(this);
+    warningWidget->setStyleSheet(
+        "QWidget {"
+        "    background-color: #FFF3CD;"
+        "    border-left: 4px solid #FFC107;"
+        "    border-radius: 4px;"
+        "}"
+    );
+
+    QHBoxLayout* warningLayout = new QHBoxLayout(warningWidget);
+    warningLayout->setContentsMargins(12, 12, 12, 12);
+    warningLayout->setSpacing(10);
+
+    QLabel* warningIcon = new QLabel(tr("⚠️"), this);
+    warningIcon->setStyleSheet("QLabel { font-size: 18pt; background: transparent; border: none; }");
+    warningLayout->addWidget(warningIcon);
+
     QLabel* warningLabel = new QLabel(
-        tr("<b>警告：</b>恢复操作将覆盖目标路径中的同名文件！"),
+        tr("<b>警告：</b>恢复操作将覆盖目标路径中的同名文件！请确保已备份重要数据。"),
         this);
-    warningLabel->setStyleSheet("QLabel { color: red; }");
+    warningLabel->setStyleSheet("QLabel { color: #856404; font-size: 10pt; background: transparent; border: none; }");
     warningLabel->setWordWrap(true);
-    layout->addWidget(warningLabel);
+    warningLayout->addWidget(warningLabel, 1);
+
+    layout->addWidget(warningWidget);
 
     setLayout(layout);
 }

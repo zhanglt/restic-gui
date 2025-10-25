@@ -5,6 +5,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QComboBox>
+#include <QLabel>
 #include <QListWidget>
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -18,19 +19,87 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
     : QDialog(parent)
 {
     setWindowTitle(tr("创建备份任务"));
-    setMinimumWidth(500);
+    setMinimumSize(550, 350);
+    resize(580, 380);
+
+    // 设置对话框样式
+    setStyleSheet(
+        "QDialog {"
+        "    background-color: white;"
+        "}"
+    );
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setSpacing(20);
+    mainLayout->setContentsMargins(25, 25, 25, 20);
 
     // 表单布局
     QFormLayout* formLayout = new QFormLayout();
+    formLayout->setVerticalSpacing(15);
+    formLayout->setHorizontalSpacing(15);
+    formLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
     // 任务名称
     m_nameEdit = new QLineEdit(this);
-    formLayout->addRow(tr("任务名称:"), m_nameEdit);
+    m_nameEdit->setPlaceholderText(tr("例如：每日备份"));
+    m_nameEdit->setMinimumHeight(30);
+    m_nameEdit->setStyleSheet(
+        "QLineEdit {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QLineEdit:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "    background-color: #F8FCFF;"
+        "}"
+        "QLineEdit:hover {"
+        "    border-color: #A0A0A0;"
+        "}"
+    );
+
+    QLabel* nameLabel = new QLabel(tr("任务名称:"), this);
+    nameLabel->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #333333; }");
+    formLayout->addRow(nameLabel, m_nameEdit);
 
     // 选择仓库
     m_repoComboBox = new QComboBox(this);
+    m_repoComboBox->setMinimumHeight(30);
+    m_repoComboBox->setStyleSheet(
+        "QComboBox {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QComboBox:hover {"
+        "    border-color: #A0A0A0;"
+        "}"
+        "QComboBox:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "}"
+        "QComboBox::drop-down {"
+        "    border: none;"
+        "    width: 25px;"
+        "}"
+        "QComboBox::down-arrow {"
+        "    image: none;"
+        "    border-left: 4px solid transparent;"
+        "    border-right: 4px solid transparent;"
+        "    border-top: 5px solid #666666;"
+        "    margin-right: 6px;"
+        "}"
+        "QComboBox:disabled {"
+        "    background-color: #F5F5F5;"
+        "    color: #999999;"
+        "}"
+    );
+
     Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
     QList<Models::Repository> repositories = repoMgr->getAllRepositories();
 
@@ -42,15 +111,64 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
             m_repoComboBox->addItem(repo.name, repo.id);
         }
     }
-    formLayout->addRow(tr("目标仓库:"), m_repoComboBox);
+
+    QLabel* repoLabel = new QLabel(tr("目标仓库:"), this);
+    repoLabel->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #333333; }");
+    formLayout->addRow(repoLabel, m_repoComboBox);
 
     // 源路径（简化版，只支持单个路径）
     m_pathEdit = new QLineEdit(this);
+    m_pathEdit->setMinimumHeight(30);
+    m_pathEdit->setStyleSheet(
+        "QLineEdit {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QLineEdit:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "    background-color: #F8FCFF;"
+        "}"
+        "QLineEdit:hover {"
+        "    border-color: #A0A0A0;"
+        "}"
+    );
+
     QPushButton* browseButton = new QPushButton(tr("浏览..."), this);
+    browseButton->setMinimumHeight(30);
+    browseButton->setMinimumWidth(75);
+    browseButton->setCursor(Qt::PointingHandCursor);
+    browseButton->setStyleSheet(
+        "QPushButton {"
+        "    padding: 5px 14px;"
+        "    border: 1px solid #4A90E2;"
+        "    border-radius: 4px;"
+        "    background-color: white;"
+        "    color: #4A90E2;"
+        "    font-size: 10pt;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #4A90E2;"
+        "    color: white;"
+        "    border-color: #4A90E2;"
+        "}"
+        "QPushButton:pressed {"
+        "    background-color: #357ABD;"
+        "    border-color: #357ABD;"
+        "}"
+    );
+
     QHBoxLayout* pathLayout = new QHBoxLayout();
-    pathLayout->addWidget(m_pathEdit);
+    pathLayout->setSpacing(10);
+    pathLayout->addWidget(m_pathEdit, 1);
     pathLayout->addWidget(browseButton);
-    formLayout->addRow(tr("备份路径:"), pathLayout);
+
+    QLabel* pathLabel = new QLabel(tr("备份路径:"), this);
+    pathLabel->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #333333; }");
+    formLayout->addRow(pathLabel, pathLayout);
 
     connect(browseButton, &QPushButton::clicked, this, [this]() {
         QString dir = QFileDialog::getExistingDirectory(this, tr("选择备份目录"));
@@ -61,19 +179,96 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
 
     // 计划类型
     m_scheduleComboBox = new QComboBox(this);
+    m_scheduleComboBox->setMinimumHeight(30);
+    m_scheduleComboBox->setStyleSheet(
+        "QComboBox {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QComboBox:hover {"
+        "    border-color: #A0A0A0;"
+        "}"
+        "QComboBox:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "}"
+        "QComboBox::drop-down {"
+        "    border: none;"
+        "    width: 25px;"
+        "}"
+        "QComboBox::down-arrow {"
+        "    image: none;"
+        "    border-left: 4px solid transparent;"
+        "    border-right: 4px solid transparent;"
+        "    border-top: 5px solid #666666;"
+        "    margin-right: 6px;"
+        "}"
+    );
     m_scheduleComboBox->addItem(tr("手动"), static_cast<int>(Models::Schedule::Manual));
     m_scheduleComboBox->addItem(tr("每分钟"), static_cast<int>(Models::Schedule::Minutely));
     m_scheduleComboBox->addItem(tr("每小时"), static_cast<int>(Models::Schedule::Hourly));
     m_scheduleComboBox->addItem(tr("每天"), static_cast<int>(Models::Schedule::Daily));
     m_scheduleComboBox->addItem(tr("每周"), static_cast<int>(Models::Schedule::Weekly));
     m_scheduleComboBox->addItem(tr("每月"), static_cast<int>(Models::Schedule::Monthly));
-    formLayout->addRow(tr("计划:"), m_scheduleComboBox);
+
+    QLabel* scheduleLabel = new QLabel(tr("计划:"), this);
+    scheduleLabel->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #333333; }");
+    formLayout->addRow(scheduleLabel, m_scheduleComboBox);
 
     mainLayout->addLayout(formLayout);
+    mainLayout->addStretch();
 
     // 按钮
     QDialogButtonBox* buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+
+    // 美化按钮
+    buttonBox->button(QDialogButtonBox::Ok)->setText(tr("确定"));
+    buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("取消"));
+    buttonBox->button(QDialogButtonBox::Ok)->setMinimumHeight(30);
+    buttonBox->button(QDialogButtonBox::Cancel)->setMinimumHeight(30);
+    buttonBox->button(QDialogButtonBox::Ok)->setMinimumWidth(75);
+    buttonBox->button(QDialogButtonBox::Cancel)->setMinimumWidth(75);
+    buttonBox->button(QDialogButtonBox::Ok)->setCursor(Qt::PointingHandCursor);
+    buttonBox->button(QDialogButtonBox::Cancel)->setCursor(Qt::PointingHandCursor);
+
+    buttonBox->setStyleSheet(
+        "QPushButton {"
+        "    padding: 5px 14px;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "}"
+        "QPushButton:first-child {"  // OK按钮
+        "    background-color: #4A90E2;"
+        "    color: white;"
+        "    border: 1px solid #4A90E2;"
+        "    font-weight: bold;"
+        "}"
+        "QPushButton:first-child:hover {"
+        "    background-color: #357ABD;"
+        "    border-color: #357ABD;"
+        "}"
+        "QPushButton:first-child:pressed {"
+        "    background-color: #2E6BA8;"
+        "}"
+        "QPushButton:last-child {"  // Cancel按钮
+        "    background-color: white;"
+        "    color: #666666;"
+        "    border: 1px solid #CCCCCC;"
+        "}"
+        "QPushButton:last-child:hover {"
+        "    background-color: #F5F5F5;"
+        "    border-color: #999999;"
+        "    color: #333333;"
+        "}"
+        "QPushButton:last-child:pressed {"
+        "    background-color: #E0E0E0;"
+        "}"
+    );
+
     connect(buttonBox, &QDialogButtonBox::accepted, this, [this]() {
         Utils::Logger::instance()->log(Utils::Logger::Debug, "CreateTaskDialog: 点击确定按钮");
 

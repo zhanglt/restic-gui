@@ -5,6 +5,9 @@
 #include <QLineEdit>
 #include <QComboBox>
 #include <QTextEdit>
+#include <QProgressBar>
+#include <QLabel>
+#include <QPushButton>
 #include "../../models/Repository.h"
 
 namespace ResticGUI {
@@ -97,9 +100,21 @@ public:
     explicit PasswordPage(QWidget* parent = nullptr);
     bool validatePage() override;
 
+private slots:
+    void onPasswordChanged(const QString& password);
+    void onConfirmPasswordChanged(const QString& password);
+    void onTogglePasswordVisibility();
+
 private:
+    int calculatePasswordStrength(const QString& password);
+
     QLineEdit* m_passwordEdit;
     QLineEdit* m_confirmEdit;
+    QProgressBar* m_strengthBar;
+    QLabel* m_strengthLabel;
+    QPushButton* m_togglePasswordButton;
+    QLabel* m_matchLabel;
+    bool m_passwordVisible;
 };
 
 /**
