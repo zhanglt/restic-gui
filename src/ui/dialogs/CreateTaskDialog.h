@@ -32,6 +32,7 @@ private:
     QLineEdit* m_nameEdit;
     QComboBox* m_repoComboBox;
     QLineEdit* m_pathEdit;
+    QLineEdit* m_tagsEdit;
     QComboBox* m_scheduleComboBox;
 };
 

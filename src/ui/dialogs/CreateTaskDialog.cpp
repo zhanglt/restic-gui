@@ -177,6 +177,32 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
         }
     });
 
+    // 标签
+    m_tagsEdit = new QLineEdit(this);
+    m_tagsEdit->setPlaceholderText(tr("例如：重要,每日 (用逗号分隔多个标签)"));
+    m_tagsEdit->setMinimumHeight(30);
+    m_tagsEdit->setStyleSheet(
+        "QLineEdit {"
+        "    padding: 5px 10px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    font-size: 10pt;"
+        "    background-color: white;"
+        "}"
+        "QLineEdit:focus {"
+        "    border: 2px solid #4A90E2;"
+        "    padding: 4px 9px;"
+        "    background-color: #F8FCFF;"
+        "}"
+        "QLineEdit:hover {"
+        "    border-color: #A0A0A0;"
+        "}"
+    );
+
+    QLabel* tagsLabel = new QLabel(tr("标签 (可选):"), this);
+    tagsLabel->setStyleSheet("QLabel { font-size: 10pt; font-weight: bold; color: #333333; }");
+    formLayout->addRow(tagsLabel, m_tagsEdit);
+
     // 计划类型
     m_scheduleComboBox = new QComboBox(this);
     m_scheduleComboBox->setMinimumHeight(30);
@@ -300,14 +326,29 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
         m_task.repositoryId = repoId;
         m_task.sourcePaths.clear();
         m_task.sourcePaths.append(m_pathEdit->text());
+
+        // 处理标签（将逗号分隔的字符串转换为 QStringList）
+        m_task.tags.clear();
+        QString tagsText = m_tagsEdit->text().trimmed();
+        if (!tagsText.isEmpty()) {
+            QStringList tagList = tagsText.split(',', Qt::SkipEmptyParts);
+            for (QString& tag : tagList) {
+                tag = tag.trimmed();
+                if (!tag.isEmpty()) {
+                    m_task.tags.append(tag);
+                }
+            }
+        }
+
         m_task.schedule.type = static_cast<Models::Schedule::Type>(m_scheduleComboBox->currentData().toInt());
         m_task.enabled = true;
 
         Utils::Logger::instance()->log(Utils::Logger::Info,
-            QString("创建任务对话框完成: name=%1, repoId=%2, path=%3, scheduleType=%4")
+            QString("创建任务对话框完成: name=%1, repoId=%2, path=%3, tags=%4, scheduleType=%5")
                 .arg(m_task.name)
                 .arg(m_task.repositoryId)
                 .arg(m_pathEdit->text())
+                .arg(m_task.tags.join(", "))
                 .arg(static_cast<int>(m_task.schedule.type)));
 
         accept();
@@ -344,6 +385,11 @@ void CreateTaskDialog::setTask(const Models::BackupTask& task)
     // 设置备份路径（只显示第一个路径）
     if (!task.sourcePaths.isEmpty()) {
         m_pathEdit->setText(task.sourcePaths.first());
+    }
+
+    // 设置标签（将 QStringList 转换为逗号分隔的字符串）
+    if (!task.tags.isEmpty()) {
+        m_tagsEdit->setText(task.tags.join(", "));
     }
 
     // 设置计划类型
