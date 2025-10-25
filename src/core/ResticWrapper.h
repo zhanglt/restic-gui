@@ -8,6 +8,7 @@
 #include "../models/Snapshot.h"
 #include "../models/FileInfo.h"
 #include "../models/BackupResult.h"
+#include "../models/BackupTask.h"
 #include "../models/RestoreOptions.h"
 #include "../models/RepoStats.h"
 
@@ -107,16 +108,12 @@ public:
      * @brief 执行备份
      * @param repo 仓库信息
      * @param password 仓库密码
-     * @param sourcePaths 源路径列表
-     * @param excludePatterns 排除模式列表
-     * @param tags 标签列表
+     * @param task 备份任务（包含源路径、排除规则等）
      * @param result 输出参数，备份结果
      * @return 成功返回true
      */
     bool backup(const Models::Repository& repo, const QString& password,
-                const QStringList& sourcePaths,
-                const QStringList& excludePatterns,
-                const QStringList& tags,
+                const Models::BackupTask& task,
                 Models::BackupResult& result);
 
     // ========== 快照操作 ==========

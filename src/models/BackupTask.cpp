@@ -19,6 +19,13 @@ QVariantMap BackupTask::toVariantMap() const
     map["enabled"] = enabled;
     map["createdAt"] = createdAt;
     map["updatedAt"] = updatedAt;
+
+    // 高级排除选项
+    map["excludeFile"] = excludeFile;
+    map["excludeLargerThan"] = excludeLargerThan;
+    map["excludeCaches"] = excludeCaches;
+    map["excludeIfPresent"] = excludeIfPresent;
+
     return map;
 }
 
@@ -38,6 +45,13 @@ BackupTask BackupTask::fromVariantMap(const QVariantMap& map)
     task.enabled = map.value("enabled", true).toBool();
     task.createdAt = map.value("createdAt").toDateTime();
     task.updatedAt = map.value("updatedAt").toDateTime();
+
+    // 高级排除选项
+    task.excludeFile = map.value("excludeFile").toString();
+    task.excludeLargerThan = map.value("excludeLargerThan").toString();
+    task.excludeCaches = map.value("excludeCaches", false).toBool();
+    task.excludeIfPresent = map.value("excludeIfPresent").toString();
+
     return task;
 }
 

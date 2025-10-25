@@ -200,24 +200,49 @@ bool ResticWrapper::prune(const Models::Repository& repo, const QString& passwor
 // ========== 备份操作 ==========
 
 bool ResticWrapper::backup(const Models::Repository& repo, const QString& password,
-                          const QStringList& sourcePaths,
-                          const QStringList& excludePatterns,
-                          const QStringList& tags,
+                          const Models::BackupTask& task,
                           Models::BackupResult& result)
 {
     QStringList args;
     args << "backup" << "--json";
 
     // 添加源路径
-    args << sourcePaths;
+    args << task.sourcePaths;
 
     // 添加排除模式
-    for (const QString& pattern : excludePatterns) {
+    for (const QString& pattern : task.excludePatterns) {
         args << "--exclude" << pattern;
     }
 
+    // 添加排除文件
+    if (!task.excludeFile.isEmpty()) {
+        args << "--exclude-file" << task.excludeFile;
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("使用排除文件: %1").arg(task.excludeFile));
+    }
+
+    // 添加文件大小限制
+    if (!task.excludeLargerThan.isEmpty()) {
+        args << "--exclude-larger-than" << task.excludeLargerThan;
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("排除大于此大小的文件: %1").arg(task.excludeLargerThan));
+    }
+
+    // 添加排除缓存选项
+    if (task.excludeCaches) {
+        args << "--exclude-caches";
+        Utils::Logger::instance()->log(Utils::Logger::Debug, "启用排除缓存目录");
+    }
+
+    // 添加条件排除选项
+    if (!task.excludeIfPresent.isEmpty()) {
+        args << "--exclude-if-present" << task.excludeIfPresent;
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("排除包含此文件的目录: %1").arg(task.excludeIfPresent));
+    }
+
     // 添加标签
-    for (const QString& tag : tags) {
+    for (const QString& tag : task.tags) {
         args << "--tag" << tag;
     }
 
@@ -225,7 +250,9 @@ bool ResticWrapper::backup(const Models::Repository& repo, const QString& passwo
 
     QString output;
     Utils::Logger::instance()->log(Utils::Logger::Info,
-        QString("开始备份，源路径数: %1").arg(sourcePaths.size()));
+        QString("开始备份，源路径数: %1, 排除模式数: %2")
+            .arg(task.sourcePaths.size())
+            .arg(task.excludePatterns.size()));
 
     bool success = executeCommandWithProgress(args, output, password, &repo);
 

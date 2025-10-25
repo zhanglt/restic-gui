@@ -34,6 +34,12 @@ struct BackupTask
     QDateTime lastRun;
     QDateTime nextRun;
 
+    // 高级排除选项
+    QString excludeFile;           // 从文件读取排除列表的路径
+    QString excludeLargerThan;     // 排除大于此大小的文件 (如 "100M", "1G")
+    bool excludeCaches = false;    // 排除包含 CACHEDIR.TAG 的缓存目录
+    QString excludeIfPresent;      // 排除包含指定文件的目录
+
     // 运行时填充
     Repository repository;
 

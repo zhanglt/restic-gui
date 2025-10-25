@@ -172,8 +172,7 @@ bool BackupManager::runBackupTask(int taskId)
             }
         });
 
-        bool success = wrapper.backup(repo, password, task.sourcePaths,
-                                      task.excludePatterns, task.tags, result);
+        bool success = wrapper.backup(repo, password, task, result);
 
         // 如果备份失败且没有错误消息，使用捕获的错误消息
         if (!success && result.errorMessage.isEmpty()) {
@@ -252,13 +251,20 @@ bool BackupManager::runBackupNow(int repoId, const QStringList& sourcePaths,
 
     m_running = true;
 
+    // 创建临时任务对象用于立即备份
+    Models::BackupTask tempTask;
+    tempTask.repositoryId = repoId;
+    tempTask.sourcePaths = sourcePaths;
+    tempTask.excludePatterns = excludePatterns;
+    tempTask.tags = tags;
+    // 其他高级排除选项使用默认值
+
     ResticWrapper wrapper;
     connect(&wrapper, &ResticWrapper::progressUpdated,
             this, &BackupManager::backupProgress);
 
     Models::BackupResult result;
-    bool success = wrapper.backup(repo, password, sourcePaths,
-                                  excludePatterns, tags, result);
+    bool success = wrapper.backup(repo, password, tempTask, result);
 
     m_running = false;
 
