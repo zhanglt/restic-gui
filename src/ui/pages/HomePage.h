@@ -21,6 +21,9 @@ public:
 signals:
     void navigateToPage(int pageIndex);
 
+public slots:
+    void refreshData();  // 公共刷新方法
+
 private slots:
     void onCreateRepository();
     void onCreateTask();

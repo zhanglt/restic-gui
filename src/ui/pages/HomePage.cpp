@@ -61,6 +61,11 @@ HomePage::HomePage(QWidget* parent)
     connect(ui->createTaskButton, &QPushButton::clicked, this, &HomePage::onCreateTask);
     connect(ui->browseSnapshotsButton, &QPushButton::clicked, this, &HomePage::onRestoreData);
 
+    // 监听快照更新信号
+    Core::SnapshotManager* snapshotMgr = Core::SnapshotManager::instance();
+    connect(snapshotMgr, &Core::SnapshotManager::snapshotsUpdated,
+            this, [this](int) { refreshData(); });
+
     loadDashboardData();
     loadRecentActivities();
 }
@@ -291,6 +296,12 @@ void HomePage::onRestoreData()
 
     // 通知主窗口切换到数据恢复页面 (索引4)
     emit navigateToPage(4);
+}
+
+void HomePage::refreshData()
+{
+    loadDashboardData();
+    loadRecentActivities();
 }
 
 } // namespace UI
