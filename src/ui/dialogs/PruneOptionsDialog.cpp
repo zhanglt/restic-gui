@@ -9,6 +9,7 @@ PruneOptionsDialog::PruneOptionsDialog(QWidget* parent)
     , ui(new Ui::PruneOptionsDialog)
 {
     ui->setupUi(this);
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 }
 
 PruneOptionsDialog::~PruneOptionsDialog()

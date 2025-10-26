@@ -18,6 +18,7 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     , ui(new Ui::SettingsDialog)
 {
     ui->setupUi(this);
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
     // 连接信号
     connect(ui->browseButton, &QPushButton::clicked, this, &SettingsDialog::onBrowseResticPath);

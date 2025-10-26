@@ -47,6 +47,7 @@ QString PasswordDialog::getPassword(QWidget* parent, const QString& title,
 void PasswordDialog::setupUI()
 {
     setWindowTitle(m_title);
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setMinimumWidth(420);
     setMaximumWidth(480);
 

@@ -34,6 +34,7 @@ RestoreWizard::RestoreWizard(QWidget* parent)
     , m_presetTargetPath()
 {
     setWindowTitle(tr("数据恢复向导"));
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setWizardStyle(QWizard::ModernStyle);
     setOption(QWizard::HaveHelpButton, false);
     setOption(QWizard::NoBackButtonOnStartPage, true);

@@ -29,6 +29,7 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
       m_backupParamsExpanded(false)
 {
     setWindowTitle(tr("创建备份任务"));
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setMinimumSize(550, 450);
     resize(580, 500);
 

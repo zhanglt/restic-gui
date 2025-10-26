@@ -18,6 +18,7 @@ CreateRepoWizard::CreateRepoWizard(QWidget* parent)
     : QWizard(parent)
 {
     setWindowTitle(tr("创建仓库向导"));
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setWizardStyle(QWizard::ModernStyle);
     setOption(QWizard::HaveHelpButton, false);
 

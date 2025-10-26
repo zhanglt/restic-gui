@@ -50,6 +50,7 @@ SnapshotBrowserDialog::~SnapshotBrowserDialog()
 void SnapshotBrowserDialog::setupUI()
 {
     setWindowTitle(tr("选择要恢复的文件 - %1").arg(m_snapshotName));
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     resize(900, 650);
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);

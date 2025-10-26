@@ -15,6 +15,7 @@ ProgressDialog::ProgressDialog(QWidget* parent)
     , m_completed(false)
 {
     ui->setupUi(this);
+    setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
     // 连接信号
     connect(ui->detailsButton, &QPushButton::toggled,
