@@ -2,6 +2,7 @@
 #define STATSPAGE_H
 
 #include <QWidget>
+#include <QFutureWatcher>
 
 namespace Ui {
 class StatsPage;
@@ -24,9 +25,16 @@ protected:
 public slots:
     void loadStats();
 
+private slots:
+    void onStatsLoaded();
+
+private:
+    QString collectStats();
+
 private:
     Ui::StatsPage* ui;
     bool m_firstShow;
+    QFutureWatcher<QString>* m_statsWatcher;
 };
 
 } // namespace UI

@@ -5,9 +5,11 @@
 #include "../../data/DatabaseManager.h"
 #include "../../data/PasswordManager.h"
 #include "../../utils/Logger.h"
+#include "../dialogs/PasswordDialog.h"
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QShowEvent>
+#include <QtConcurrent>
 
 namespace ResticGUI {
 namespace UI {
@@ -16,8 +18,14 @@ StatsPage::StatsPage(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::StatsPage)
     , m_firstShow(true)
+    , m_statsWatcher(nullptr)
 {
     ui->setupUi(this);
+
+    // 初始化异步任务监视器
+    m_statsWatcher = new QFutureWatcher<QString>(this);
+    connect(m_statsWatcher, &QFutureWatcher<QString>::finished,
+            this, &StatsPage::onStatsLoaded);
 
     // 连接信号
     connect(ui->refreshButton, &QPushButton::clicked, this, &StatsPage::loadStats);
@@ -27,6 +35,12 @@ StatsPage::StatsPage(QWidget* parent)
 
 StatsPage::~StatsPage()
 {
+    // 取消正在运行的任务
+    if (m_statsWatcher && m_statsWatcher->isRunning()) {
+        m_statsWatcher->cancel();
+        m_statsWatcher->waitForFinished();
+    }
+
     delete ui;
 }
 
@@ -43,18 +57,24 @@ void StatsPage::showEvent(QShowEvent* event)
 
 void StatsPage::loadStats()
 {
-    // 获取仓库统计
+    // 如果已经在加载中，不重复加载
+    if (m_statsWatcher && m_statsWatcher->isRunning()) {
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            "统计信息正在加载中，忽略重复请求");
+        return;
+    }
+
+    // 获取仓库列表
     Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
     QList<Models::Repository> repositories = repoMgr->getAllRepositories();
 
-    // 在加载统计信息前，先请求所有需要的密码
+    // 在开始异步加载前，先请求所有需要的密码（这必须在主线程中进行）
     Data::PasswordManager* passMgr = Data::PasswordManager::instance();
     for (const auto& repo : repositories) {
         if (!passMgr->hasPassword(repo.id)) {
             bool ok;
-            QString password = QInputDialog::getText(this, tr("输入密码"),
-                tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-                QLineEdit::Password, QString(), &ok);
+            QString password = PasswordDialog::getPassword(this, tr("输入密码"),
+                tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
             if (ok && !password.isEmpty()) {
                 // 保存密码到密码管理器
@@ -64,10 +84,35 @@ void StatsPage::loadStats()
         }
     }
 
+    // 显示加载提示
+    ui->statsTextEdit->setText(tr("正在加载统计信息，请稍候...\n\n"
+                                   "这可能需要几秒钟时间，具体取决于仓库大小和网络速度。"));
+
+    // 禁用刷新按钮
+    ui->refreshButton->setEnabled(false);
+
+    Utils::Logger::instance()->log(Utils::Logger::Info, "开始异步加载统计信息");
+
+    // 启动异步任务
+    QFuture<QString> future = QtConcurrent::run([this]() {
+        return collectStats();
+    });
+
+    m_statsWatcher->setFuture(future);
+}
+
+QString StatsPage::collectStats()
+{
+    // 这个方法在后台线程中执行，不能直接访问UI
+
     QString statsText;
     statsText += "=================================\n";
     statsText += "        Restic GUI 统计信息\n";
     statsText += "=================================\n\n";
+
+    // 获取仓库统计
+    Core::RepositoryManager* repoMgr = Core::RepositoryManager::instance();
+    QList<Models::Repository> repositories = repoMgr->getAllRepositories();
 
     statsText += QString("仓库总数: %1\n\n").arg(repositories.size());
 
@@ -95,6 +140,7 @@ void StatsPage::loadStats()
     int totalSnapshots = 0;
     int totalBackups = 0;
     Core::SnapshotManager* snapshotMgr = Core::SnapshotManager::instance();
+    Data::PasswordManager* passMgr = Data::PasswordManager::instance();
 
     statsText += "各仓库详细信息:\n";
     statsText += "---------------------------------\n\n";
@@ -106,15 +152,22 @@ void StatsPage::loadStats()
 
         // 获取快照数量（仅对有密码的仓库）
         if (passMgr->hasPassword(repo.id)) {
-            QList<Models::Snapshot> snapshots = snapshotMgr->listSnapshots(repo.id, false);
-            int snapshotCount = snapshots.size();
-            totalSnapshots += snapshotCount;
+            try {
+                // 这里是耗时操作，但现在在后台线程执行，不会阻塞UI
+                QList<Models::Snapshot> snapshots = snapshotMgr->listSnapshots(repo.id, false);
+                int snapshotCount = snapshots.size();
+                totalSnapshots += snapshotCount;
 
-            statsText += QString("  快照数量: %1\n").arg(snapshotCount);
+                statsText += QString("  快照数量: %1\n").arg(snapshotCount);
 
-            if (!snapshots.isEmpty()) {
-                statsText += QString("  最新快照: %1\n")
-                    .arg(snapshots.last().time.toString("yyyy-MM-dd HH:mm:ss"));
+                if (!snapshots.isEmpty()) {
+                    statsText += QString("  最新快照: %1\n")
+                        .arg(snapshots.last().time.toString("yyyy-MM-dd HH:mm:ss"));
+                }
+            } catch (...) {
+                statsText += "  快照数量: (加载失败)\n";
+                Utils::Logger::instance()->log(Utils::Logger::Warning,
+                    QString("加载仓库 %1 的快照失败").arg(repo.name));
             }
         } else {
             statsText += "  快照数量: (需要密码)\n";
@@ -146,7 +199,28 @@ void StatsPage::loadStats()
     statsText += QString("备份总次数: %1\n").arg(totalBackups);
     statsText += "=================================\n";
 
+    return statsText;
+}
+
+void StatsPage::onStatsLoaded()
+{
+    // 这个方法在主线程中执行，可以安全访问UI
+
+    if (m_statsWatcher->isCanceled()) {
+        Utils::Logger::instance()->log(Utils::Logger::Info, "统计信息加载已取消");
+        ui->statsTextEdit->setText(tr("统计信息加载已取消"));
+        ui->refreshButton->setEnabled(true);
+        return;
+    }
+
+    // 获取结果并更新UI
+    QString statsText = m_statsWatcher->result();
     ui->statsTextEdit->setText(statsText);
+
+    // 恢复刷新按钮
+    ui->refreshButton->setEnabled(true);
+
+    Utils::Logger::instance()->log(Utils::Logger::Info, "统计信息加载完成");
 }
 
 } // namespace UI
