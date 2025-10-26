@@ -11,14 +11,24 @@
 - [x] RestorePage - 恢复页 (简单占位)
 - [x] StatsPage - 统计页 (简单占位)
 
-### 对话框
-- [x] ProgressDialog - 进度对话框 (完整功能)
+### 对话框（使用.ui文件）
+- [x] ProgressDialog - 进度对话框 (实时进度、日志输出)
 - [x] SettingsDialog - 设置对话框 (完整功能)
+- [x] PruneOptionsDialog - 清理选项对话框 (完整功能)
 
 ### 保持纯代码的组件
-- CreateRepoWizard - 向导（包含5个动态页面）
-- SnapshotListWidget - 自定义控件
-- FileTreeWidget - 自定义控件
+#### 向导
+- CreateRepoWizard - 创建仓库向导（5个动态页面）
+- RestoreWizard - 数据恢复向导
+
+#### 对话框
+- CreateTaskDialog - 创建备份任务对话框（向导式界面）
+- PasswordDialog - 密码输入对话框
+- SnapshotBrowserDialog - 快照浏览对话框
+
+#### 自定义控件
+- SnapshotListWidget - 快照列表控件
+- FileTreeWidget - 文件树控件
 
 ## 修改要点
 
@@ -89,6 +99,9 @@ FORMS += \
     src/ui/pages/RestorePage.ui \
     src/ui/pages/StatsPage.ui \
     src/ui/dialogs/ProgressDialog.ui \
-    src/ui/dialogs/SettingsDialog.ui
+    src/ui/dialogs/SettingsDialog.ui \
+    src/ui/dialogs/PruneOptionsDialog.ui
 ```
+
+**说明：** 共10个.ui文件（1个主窗口 + 6个页面 + 3个对话框）
 

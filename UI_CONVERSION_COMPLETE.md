@@ -31,18 +31,24 @@
 - ✅ **RestorePage.ui** - 数据恢复页 (占位界面)
 - ✅ **StatsPage.ui** - 统计信息页 (占位界面)
 
-### 3. 对话框 (2个)
+### 3. 对话框 (3个.ui文件)
 - ✅ **ProgressDialog.ui** - 进度对话框
   - 标题标签
   - 进度条
   - 消息标签
   - 详细日志文本框（可折叠）
   - 按钮（显示详情/取消/关闭）
+  - **新功能**：实时备份进度显示
 
 - ✅ **SettingsDialog.ui** - 设置对话框
   - 4个标签页（常规/备份/密码/网络）
   - 完整的设置选项
   - 对话框按钮（确定/取消/应用）
+
+- ✅ **PruneOptionsDialog.ui** - 清理选项对话框
+  - 清理策略配置
+  - 保留规则设置
+  - 预览清理结果
 
 ---
 
@@ -123,20 +129,30 @@ ui->progressBar->setValue(50);
 ## 📦 项目文件统计
 
 ### UI文件
-- **.ui文件总数**: **9个**
+- **.ui文件总数**: **10个**
   - 1个主窗口
   - 6个页面
-  - 2个对话框
+  - 3个对话框
 
 ### 代码文件（已修改）
-- **修改的.h文件**: 9个
-- **修改的.cpp文件**: 9个
+- **修改的.h文件**: 10个
+- **修改的.cpp文件**: 10个
 
 ### 保持纯代码的组件
 以下组件因为包含复杂动态逻辑，保持纯代码方式：
-- ✅ CreateRepoWizard（5页向导）
-- ✅ SnapshotListWidget（自定义控件）
-- ✅ FileTreeWidget（自定义控件）
+
+#### 向导
+- ✅ **CreateRepoWizard** - 创建仓库向导（5页动态向导）
+- ✅ **RestoreWizard** - 数据恢复向导（4页向导）
+
+#### 对话框
+- ✅ **CreateTaskDialog** - 创建备份任务对话框（向导式界面）
+- ✅ **PasswordDialog** - 密码输入对话框（支持显示/隐藏）
+- ✅ **SnapshotBrowserDialog** - 快照浏览对话框
+
+#### 自定义控件
+- ✅ **SnapshotListWidget** - 快照列表控件（自定义绘制）
+- ✅ **FileTreeWidget** - 文件树控件（自定义绘制）
 
 ---
 
@@ -156,7 +172,8 @@ FORMS += \
     src/ui/pages/RestorePage.ui \
     src/ui/pages/StatsPage.ui \
     src/ui/dialogs/ProgressDialog.ui \
-    src/ui/dialogs/SettingsDialog.ui
+    src/ui/dialogs/SettingsDialog.ui \
+    src/ui/dialogs/PruneOptionsDialog.ui
 ```
 
 ### 编译流程
@@ -282,9 +299,9 @@ HomePage::HomePage(QWidget* parent)
 
 ## 📋 转换检查清单
 
-- [x] 创建所有.ui文件（9个）
-- [x] 修改所有.h文件（9个）
-- [x] 修改所有.cpp文件（9个）
+- [x] 创建所有.ui文件（10个）
+- [x] 修改所有.h文件（10个）
+- [x] 修改所有.cpp文件（10个）
 - [x] 更新.pro文件的FORMS列表
 - [x] 清理旧的setupUI()代码
 - [x] 所有控件访问改为ui->
@@ -298,8 +315,17 @@ HomePage::HomePage(QWidget* parent)
 项目现在完全使用Qt Designer的.ui文件方式，可以享受可视化设计带来的便利！
 
 **文件总计：**
-- ✅ 9个.ui文件
-- ✅ 18个修改的C++文件
+- ✅ 10个.ui文件
+- ✅ 20个修改的C++文件
 - ✅ 1个更新的.pro文件
 
 **可以立即编译运行！** 🚀
+
+---
+
+## 📝 更新记录
+
+### 2025-10-26更新
+- 新增 PruneOptionsDialog.ui
+- 统计信息更新为10个.ui文件
+- 补充纯代码组件详细列表
