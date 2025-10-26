@@ -2,6 +2,7 @@
 #include "ui_BackupPage.h"
 #include "../dialogs/CreateTaskDialog.h"
 #include "../dialogs/PasswordDialog.h"
+#include "../dialogs/ProgressDialog.h"
 #include "../../data/DatabaseManager.h"
 #include "../../data/PasswordManager.h"
 #include "../../core/RepositoryManager.h"
@@ -18,6 +19,8 @@ namespace UI {
 BackupPage::BackupPage(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::BackupPage)
+    , m_progressDialog(nullptr)
+    , m_currentBackupTaskId(-1)
 {
     ui->setupUi(this);
 
@@ -215,6 +218,12 @@ BackupPage::BackupPage(QWidget* parent)
 
 BackupPage::~BackupPage()
 {
+    // 安全删除进度对话框
+    if (m_progressDialog) {
+        m_progressDialog->deleteLater();
+        m_progressDialog = nullptr;
+    }
+
     delete ui;
 }
 
@@ -586,15 +595,52 @@ void BackupPage::onRunTask()
             QString("已为仓库 %1 设置密码").arg(repo.name));
     }
 
-    // 执行备份
+    // 创建进度对话框
+    if (m_progressDialog) {
+        m_progressDialog->deleteLater();
+    }
+    m_progressDialog = new ProgressDialog(this);
+    m_progressDialog->setTitle(tr("正在执行备份..."));
+    m_progressDialog->setMessage(tr("准备开始备份..."));
+    m_progressDialog->setProgress(0);
+
+    // 保存当前任务ID
+    m_currentBackupTaskId = taskId;
+
+    // 连接 BackupManager 信号
     Core::BackupManager* backupMgr = Core::BackupManager::instance();
+    connect(backupMgr, &Core::BackupManager::backupStarted,
+            this, &BackupPage::onBackupStarted, Qt::UniqueConnection);
+    connect(backupMgr, &Core::BackupManager::backupProgress,
+            this, &BackupPage::onBackupProgress, Qt::UniqueConnection);
+    connect(backupMgr, &Core::BackupManager::backupFinished,
+            this, &BackupPage::onBackupFinished, Qt::UniqueConnection);
+
+    // 连接对话框取消信号
+    connect(m_progressDialog, &ProgressDialog::cancelled,
+            this, &BackupPage::onBackupCancelled, Qt::UniqueConnection);
+
+    // 执行备份
     bool started = backupMgr->runBackupTask(taskId);
 
     if (started) {
-        QMessageBox::information(this, tr("开始备份"),
-            tr("备份任务 \"%1\" 已开始执行。\n\n"
-               "请在日志中查看备份进度。").arg(task.name));
+        // 显示进度对话框（非模态）
+        m_progressDialog->show();
+        Utils::Logger::instance()->log(Utils::Logger::Info,
+            QString("开始手动执行备份任务: %1").arg(task.name));
     } else {
+        // 备份启动失败，删除对话框并断开连接
+        m_progressDialog->deleteLater();
+        m_progressDialog = nullptr;
+        m_currentBackupTaskId = -1;
+
+        disconnect(backupMgr, &Core::BackupManager::backupStarted,
+                   this, &BackupPage::onBackupStarted);
+        disconnect(backupMgr, &Core::BackupManager::backupProgress,
+                   this, &BackupPage::onBackupProgress);
+        disconnect(backupMgr, &Core::BackupManager::backupFinished,
+                   this, &BackupPage::onBackupFinished);
+
         QMessageBox::critical(this, tr("错误"),
             tr("无法启动备份任务 \"%1\"。\n\n"
                "可能的原因：\n"
@@ -814,6 +860,110 @@ void BackupPage::clearDetails()
     ui->detailLastRunLabel->setText("-");
     ui->detailNextRunLabel->setText("-");
     ui->historyList->clear();
+}
+
+// ========== 备份进度相关槽函数 ==========
+
+void BackupPage::onBackupStarted(int taskId)
+{
+    // 只处理当前手动执行的任务
+    if (taskId != m_currentBackupTaskId) {
+        return;
+    }
+
+    if (!m_progressDialog) {
+        return;
+    }
+
+    // 获取任务信息
+    Data::DatabaseManager* db = Data::DatabaseManager::instance();
+    Models::BackupTask task = db->getBackupTask(taskId);
+
+    m_progressDialog->setTitle(tr("正在执行备份..."));
+    m_progressDialog->setMessage(tr("任务: %1\n状态: 正在准备...").arg(task.name));
+    m_progressDialog->appendLog(tr("[%1] 开始备份任务: %2")
+        .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
+        .arg(task.name));
+}
+
+void BackupPage::onBackupProgress(int percent, const QString& message)
+{
+    // 只处理当前手动执行的任务
+    if (!m_progressDialog) {
+        return;
+    }
+
+    m_progressDialog->setProgress(percent);
+    m_progressDialog->setMessage(message);
+    m_progressDialog->appendLog(tr("[%1] %2")
+        .arg(QDateTime::currentDateTime().toString("HH:mm:ss"))
+        .arg(message));
+}
+
+void BackupPage::onBackupFinished(int taskId, bool success)
+{
+    // 只处理当前手动执行的任务
+    if (taskId != m_currentBackupTaskId) {
+        return;
+    }
+
+    if (!m_progressDialog) {
+        return;
+    }
+
+    // 获取任务信息
+    Data::DatabaseManager* db = Data::DatabaseManager::instance();
+    Models::BackupTask task = db->getBackupTask(taskId);
+
+    // 设置完成状态
+    m_progressDialog->setCompleted(success);
+
+    if (success) {
+        m_progressDialog->appendLog(tr("[%1] 备份任务 \"%2\" 成功完成！")
+            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
+            .arg(task.name));
+    } else {
+        m_progressDialog->appendLog(tr("[%1] 备份任务 \"%2\" 执行失败！")
+            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
+            .arg(task.name));
+    }
+
+    // 断开信号连接
+    Core::BackupManager* backupMgr = Core::BackupManager::instance();
+    disconnect(backupMgr, &Core::BackupManager::backupStarted,
+               this, &BackupPage::onBackupStarted);
+    disconnect(backupMgr, &Core::BackupManager::backupProgress,
+               this, &BackupPage::onBackupProgress);
+    disconnect(backupMgr, &Core::BackupManager::backupFinished,
+               this, &BackupPage::onBackupFinished);
+
+    // 重置任务ID
+    m_currentBackupTaskId = -1;
+
+    // 刷新任务列表
+    loadTasks();
+
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("备份任务 \"%1\" 完成，结果: %2").arg(task.name).arg(success ? "成功" : "失败"));
+}
+
+void BackupPage::onBackupCancelled()
+{
+    if (m_currentBackupTaskId < 0) {
+        return;
+    }
+
+    Utils::Logger::instance()->log(Utils::Logger::Info,
+        QString("用户取消备份任务，ID: %1").arg(m_currentBackupTaskId));
+
+    // 调用 BackupManager 取消备份
+    Core::BackupManager::instance()->cancelBackup();
+
+    if (m_progressDialog) {
+        m_progressDialog->setMessage(tr("正在取消备份..."));
+        m_progressDialog->appendLog(tr("[%1] 用户取消了备份操作")
+            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")));
+    }
 }
 
 } // namespace UI
