@@ -163,6 +163,16 @@ private:
      */
     QString hashMasterPassword(const QString& password) const;
 
+    /**
+     * @brief 检查是否已设置主密码（无锁版本，内部使用）
+     */
+    bool hasMasterPasswordUnlocked() const;
+
+    /**
+     * @brief 验证主密码（无锁版本，内部使用）
+     */
+    bool verifyMasterPasswordUnlocked(const QString& password) const;
+
 private slots:
     /**
      * @brief 密码缓存超时处理

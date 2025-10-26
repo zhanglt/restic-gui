@@ -274,6 +274,12 @@ void PasswordManager::setMasterPassword(const QString& password)
 bool PasswordManager::hasMasterPassword() const
 {
     QMutexLocker locker(&m_mutex);
+    return hasMasterPasswordUnlocked();
+}
+
+bool PasswordManager::hasMasterPasswordUnlocked() const
+{
+    // 注意：调用此函数前必须已经获取了锁
 
     if (!m_masterPasswordHash.isEmpty()) {
         return true;
@@ -287,6 +293,12 @@ bool PasswordManager::hasMasterPassword() const
 bool PasswordManager::verifyMasterPassword(const QString& password) const
 {
     QMutexLocker locker(&m_mutex);
+    return verifyMasterPasswordUnlocked(password);
+}
+
+bool PasswordManager::verifyMasterPasswordUnlocked(const QString& password) const
+{
+    // 注意：调用此函数前必须已经获取了锁
 
     QString hash = hashMasterPassword(password);
 
@@ -304,8 +316,8 @@ bool PasswordManager::changeMasterPassword(const QString& oldPassword, const QSt
 {
     QMutexLocker locker(&m_mutex);
 
-    // 验证旧密码
-    if (!verifyMasterPassword(oldPassword)) {
+    // 验证旧密码（使用无锁版本）
+    if (!verifyMasterPasswordUnlocked(oldPassword)) {
         Utils::Logger::instance()->log(Utils::Logger::Error, "旧主密码验证失败");
         return false;
     }
@@ -329,7 +341,9 @@ bool PasswordManager::changeMasterPassword(const QString& oldPassword, const QSt
 
 bool PasswordManager::loadFromDatabase(int repoId, QString& password)
 {
-    if (!hasMasterPassword()) {
+    // 注意：此函数调用者已经获取了锁
+
+    if (!hasMasterPasswordUnlocked()) {
         Utils::Logger::instance()->log(Utils::Logger::Error, "未设置主密码，无法加载密码");
         return false;
     }
@@ -347,7 +361,9 @@ bool PasswordManager::loadFromDatabase(int repoId, QString& password)
 
 bool PasswordManager::saveToDatabase(int repoId, const QString& password)
 {
-    if (!hasMasterPassword()) {
+    // 注意：此函数调用者已经获取了锁
+
+    if (!hasMasterPasswordUnlocked()) {
         Utils::Logger::instance()->log(Utils::Logger::Error, "未设置主密码，无法保存密码");
         return false;
     }
