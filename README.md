@@ -319,9 +319,9 @@ Restic 采用 BSD 2-Clause 许可证
 
 ## 联系方式
 
-- 项目主页：https://github.com/yourname/restic-gui
-- 问题反馈：https://github.com/yourname/restic-gui/issues
-- 邮箱：yourname@example.com
+- 项目主页：https://github.com/zhanglt/restic-gui
+- 问题反馈：https://github.com/zhanglt/restic-gui/issues
+- 邮箱：kitsdk@gmail.com
 
 ---
 
