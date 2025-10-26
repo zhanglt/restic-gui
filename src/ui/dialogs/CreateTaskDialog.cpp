@@ -24,7 +24,9 @@ namespace UI {
 
 CreateTaskDialog::CreateTaskDialog(QWidget* parent)
     : QDialog(parent),
-      m_advancedExpanded(false)
+      m_advancedExpanded(false),
+      m_includeExpanded(false),
+      m_backupParamsExpanded(false)
 {
     setWindowTitle(tr("创建备份任务"));
     setMinimumSize(550, 450);
@@ -254,9 +256,17 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
 
     mainLayout->addLayout(formLayout);
 
-    // 添加高级选项
+    // 添加高级排除选项
     setupAdvancedOptions();
     mainLayout->addWidget(m_advancedGroup);
+
+    // 添加高级包含选项
+    setupIncludeOptions();
+    mainLayout->addWidget(m_includeGroup);
+
+    // 添加高级备份参数选项
+    setupBackupParams();
+    mainLayout->addWidget(m_backupParamsGroup);
 
     mainLayout->addStretch();
 
@@ -381,15 +391,36 @@ CreateTaskDialog::CreateTaskDialog(QWidget* parent)
         // 5. 条件排除
         m_task.excludeIfPresent = m_excludeIfPresentEdit->text().trimmed();
 
+        // 收集包含文件选项数据
+        m_task.filesFrom = m_filesFromEdit->text().trimmed();
+        m_task.filesFromVerbatim = m_filesFromVerbatimEdit->text().trimmed();
+        m_task.filesFromRaw = m_filesFromRawEdit->text().trimmed();
+
+        // 收集备份参数数据
+        m_task.noScan = m_noScanCheck->isChecked();
+        m_task.compression = m_compressionCombo->currentData().toString();
+        if (m_task.compression == "auto") {
+            m_task.compression.clear(); // 默认值不需要传递
+        }
+        m_task.noExtraVerify = m_noExtraVerifyCheck->isChecked();
+
+        QString readConcurrencyText = m_readConcurrencyEdit->text().trimmed();
+        m_task.readConcurrency = readConcurrencyText.isEmpty() ? 0 : readConcurrencyText.toInt();
+
+        QString packSizeText = m_packSizeEdit->text().trimmed();
+        m_task.packSize = packSizeText.isEmpty() ? 0 : packSizeText.toInt();
+
         Utils::Logger::instance()->log(Utils::Logger::Info,
-            QString("创建任务对话框完成: name=%1, repoId=%2, path=%3, tags=%4, scheduleType=%5, excludePatterns=%6, excludeLargerThan=%7")
+            QString("创建任务对话框完成: name=%1, repoId=%2, path=%3, tags=%4, scheduleType=%5, excludePatterns=%6, filesFrom=%7, noScan=%8, compression=%9")
                 .arg(m_task.name)
                 .arg(m_task.repositoryId)
                 .arg(m_pathEdit->text())
                 .arg(m_task.tags.join(", "))
                 .arg(static_cast<int>(m_task.schedule.type))
                 .arg(m_task.excludePatterns.join(", "))
-                .arg(m_task.excludeLargerThan));
+                .arg(m_task.filesFrom)
+                .arg(m_task.noScan)
+                .arg(m_task.compression));
 
         accept();
     });
@@ -483,23 +514,66 @@ void CreateTaskDialog::setTask(const Models::BackupTask& task)
     // 5. 条件排除
     m_excludeIfPresentEdit->setText(task.excludeIfPresent);
 
+    // 填充包含文件选项数据
+    m_filesFromEdit->setText(task.filesFrom);
+    m_filesFromVerbatimEdit->setText(task.filesFromVerbatim);
+    m_filesFromRawEdit->setText(task.filesFromRaw);
+
+    // 填充备份参数数据
+    m_noScanCheck->setChecked(task.noScan);
+    m_noExtraVerifyCheck->setChecked(task.noExtraVerify);
+
+    // 设置压缩级别
+    QString compression = task.compression.isEmpty() ? "auto" : task.compression;
+    for (int i = 0; i < m_compressionCombo->count(); ++i) {
+        if (m_compressionCombo->itemData(i).toString() == compression) {
+            m_compressionCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    // 设置文件读取并发数
+    if (task.readConcurrency > 0) {
+        m_readConcurrencyEdit->setText(QString::number(task.readConcurrency));
+    } else {
+        m_readConcurrencyEdit->clear();
+    }
+
+    // 设置包大小
+    if (task.packSize > 0) {
+        m_packSizeEdit->setText(QString::number(task.packSize));
+    } else {
+        m_packSizeEdit->clear();
+    }
+
     Utils::Logger::instance()->log(Utils::Logger::Info,
-        QString("已填充任务数据到对话框: name=%1, repoId=%2, path=%3, scheduleType=%4, excludePatterns=%5")
+        QString("已填充任务数据到对话框: name=%1, repoId=%2, path=%3, scheduleType=%4, excludePatterns=%5, filesFrom=%6, noScan=%7, compression=%8")
             .arg(task.name)
             .arg(task.repositoryId)
             .arg(task.sourcePaths.isEmpty() ? "" : task.sourcePaths.first())
             .arg(static_cast<int>(task.schedule.type))
-            .arg(task.excludePatterns.join(", ")));
+            .arg(task.excludePatterns.join(", "))
+            .arg(task.filesFrom)
+            .arg(task.noScan)
+            .arg(task.compression));
 }
 
 bool CreateTaskDialog::eventFilter(QObject* obj, QEvent* event)
 {
-    if (obj == m_advancedGroup && event->type() == QEvent::MouseButtonPress) {
+    if (event->type() == QEvent::MouseButtonPress) {
         QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
         // 只在点击标题区域时切换
         if (mouseEvent->y() < 30) {
-            onAdvancedOptionsToggled();
-            return true;
+            if (obj == m_advancedGroup) {
+                onAdvancedOptionsToggled();
+                return true;
+            } else if (obj == m_includeGroup) {
+                onIncludeOptionsToggled();
+                return true;
+            } else if (obj == m_backupParamsGroup) {
+                onBackupParamsToggled();
+                return true;
+            }
         }
     }
     return QDialog::eventFilter(obj, event);
@@ -788,6 +862,340 @@ void CreateTaskDialog::onBrowseExcludeFile()
         m_excludeFileEdit->setText(fileName);
         Utils::Logger::instance()->log(Utils::Logger::Debug,
             QString("选择排除文件: %1").arg(fileName));
+    }
+}
+
+void CreateTaskDialog::setupIncludeOptions()
+{
+    m_includeGroup = new QGroupBox(tr("▶ 高级选项-包含"), this);
+    m_includeGroup->setCheckable(false);
+    m_includeGroup->setStyleSheet(
+        "QGroupBox {"
+        "    font-size: 10pt;"
+        "    font-weight: bold;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    margin-top: 10px;"
+        "    padding-top: 10px;"
+        "}"
+        "QGroupBox::title {"
+        "    subcontrol-origin: margin;"
+        "    subcontrol-position: top left;"
+        "    padding: 5px 10px;"
+        "    color: #4A90E2;"
+        "}"
+    );
+    m_includeGroup->setCursor(Qt::PointingHandCursor);
+    m_includeGroup->installEventFilter(this);
+
+    QVBoxLayout* includeLayout = new QVBoxLayout(m_includeGroup);
+    includeLayout->setSpacing(5);
+    includeLayout->setContentsMargins(15, 20, 15, 15);
+
+    // 创建滚动区域
+    QScrollArea* scrollArea = new QScrollArea(m_includeGroup);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setMaximumHeight(200);
+    scrollArea->setStyleSheet("QScrollArea { background-color: transparent; border: none; }");
+
+    QWidget* contentWidget = new QWidget();
+    QVBoxLayout* contentLayout = new QVBoxLayout(contentWidget);
+    contentLayout->setSpacing(6);
+    contentLayout->setContentsMargins(5, 5, 5, 5);
+
+    QString inputStyle =
+        "QLineEdit {"
+        "    padding: 2px 6px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 2px;"
+        "    font-size: 8pt;"
+        "    min-height: 20px;"
+        "    max-height: 20px;"
+        "}";
+
+    QString btnStyle =
+        "QPushButton {"
+        "    padding: 2px 8px;"
+        "    border: 1px solid #4A90E2;"
+        "    border-radius: 2px;"
+        "    background-color: white;"
+        "    color: #4A90E2;"
+        "    font-size: 8pt;"
+        "    min-height: 20px;"
+        "    max-height: 20px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #4A90E2;"
+        "    color: white;"
+        "}"
+        "QPushButton:pressed {"
+        "    background-color: #357ABD;"
+        "}";
+
+    // 1. files-from
+    QLabel* filesFromLabel = new QLabel(tr("从文件读取模式列表:"), contentWidget);
+    filesFromLabel->setStyleSheet("QLabel { font-size: 8pt; font-weight: bold; color: #333333; }");
+    contentLayout->addWidget(filesFromLabel);
+
+    QHBoxLayout* filesFromLayout = new QHBoxLayout();
+    filesFromLayout->setSpacing(6);
+
+    m_filesFromEdit = new QLineEdit(contentWidget);
+    m_filesFromEdit->setPlaceholderText(tr("每行一个模式，支持通配符"));
+    m_filesFromEdit->setStyleSheet(inputStyle);
+
+    m_browseFilesFromBtn = new QPushButton(tr("浏览..."), contentWidget);
+    m_browseFilesFromBtn->setStyleSheet(btnStyle);
+    m_browseFilesFromBtn->setCursor(Qt::PointingHandCursor);
+    m_browseFilesFromBtn->setMinimumWidth(65);
+
+    filesFromLayout->addWidget(m_filesFromEdit, 1);
+    filesFromLayout->addWidget(m_browseFilesFromBtn);
+    contentLayout->addLayout(filesFromLayout);
+
+    connect(m_browseFilesFromBtn, &QPushButton::clicked, this, &CreateTaskDialog::onBrowseFilesFrom);
+
+    // 2. files-from-verbatim
+    QLabel* verbatimLabel = new QLabel(tr("从文件逐字读取路径:"), contentWidget);
+    verbatimLabel->setStyleSheet("QLabel { font-size: 8pt; font-weight: bold; color: #333333; }");
+    contentLayout->addWidget(verbatimLabel);
+
+    QHBoxLayout* verbatimLayout = new QHBoxLayout();
+    verbatimLayout->setSpacing(6);
+
+    m_filesFromVerbatimEdit = new QLineEdit(contentWidget);
+    m_filesFromVerbatimEdit->setPlaceholderText(tr("每行一个路径，不展开通配符"));
+    m_filesFromVerbatimEdit->setStyleSheet(inputStyle);
+
+    m_browseFilesFromVerbatimBtn = new QPushButton(tr("浏览..."), contentWidget);
+    m_browseFilesFromVerbatimBtn->setStyleSheet(btnStyle);
+    m_browseFilesFromVerbatimBtn->setCursor(Qt::PointingHandCursor);
+    m_browseFilesFromVerbatimBtn->setMinimumWidth(65);
+
+    verbatimLayout->addWidget(m_filesFromVerbatimEdit, 1);
+    verbatimLayout->addWidget(m_browseFilesFromVerbatimBtn);
+    contentLayout->addLayout(verbatimLayout);
+
+    connect(m_browseFilesFromVerbatimBtn, &QPushButton::clicked, this, &CreateTaskDialog::onBrowseFilesFromVerbatim);
+
+    // 3. files-from-raw
+    QLabel* rawLabel = new QLabel(tr("从文件读取 NUL 分隔路径:"), contentWidget);
+    rawLabel->setStyleSheet("QLabel { font-size: 8pt; font-weight: bold; color: #333333; }");
+    contentLayout->addWidget(rawLabel);
+
+    QHBoxLayout* rawLayout = new QHBoxLayout();
+    rawLayout->setSpacing(6);
+
+    m_filesFromRawEdit = new QLineEdit(contentWidget);
+    m_filesFromRawEdit->setPlaceholderText(tr("用于脚本生成的文件列表"));
+    m_filesFromRawEdit->setStyleSheet(inputStyle);
+
+    m_browseFilesFromRawBtn = new QPushButton(tr("浏览..."), contentWidget);
+    m_browseFilesFromRawBtn->setStyleSheet(btnStyle);
+    m_browseFilesFromRawBtn->setCursor(Qt::PointingHandCursor);
+    m_browseFilesFromRawBtn->setMinimumWidth(65);
+
+    rawLayout->addWidget(m_filesFromRawEdit, 1);
+    rawLayout->addWidget(m_browseFilesFromRawBtn);
+    contentLayout->addLayout(rawLayout);
+
+    connect(m_browseFilesFromRawBtn, &QPushButton::clicked, this, &CreateTaskDialog::onBrowseFilesFromRaw);
+
+    scrollArea->setWidget(contentWidget);
+    includeLayout->addWidget(scrollArea);
+
+    scrollArea->setVisible(false);
+}
+
+void CreateTaskDialog::onIncludeOptionsToggled()
+{
+    m_includeExpanded = !m_includeExpanded;
+
+    QScrollArea* scrollArea = m_includeGroup->findChild<QScrollArea*>();
+    if (scrollArea) {
+        scrollArea->setVisible(m_includeExpanded);
+    }
+
+    m_includeGroup->setTitle(m_includeExpanded ? tr("▼ 高级选项-包含") : tr("▶ 高级选项-包含"));
+
+    if (m_includeExpanded) {
+        setMaximumHeight(16777215);
+        int currentHeight = height();
+        resize(width(), currentHeight + 220);
+    } else {
+        int currentHeight = height();
+        resize(width(), currentHeight - 220);
+    }
+}
+
+void CreateTaskDialog::onBrowseFilesFrom()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("选择包含模式文件"),
+                                                    QString(),
+                                                    tr("文本文件 (*.txt);;所有文件 (*)"));
+    if (!fileName.isEmpty()) {
+        m_filesFromEdit->setText(fileName);
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("选择 files-from 文件: %1").arg(fileName));
+    }
+}
+
+void CreateTaskDialog::onBrowseFilesFromVerbatim()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("选择路径列表文件"),
+                                                    QString(),
+                                                    tr("文本文件 (*.txt);;所有文件 (*)"));
+    if (!fileName.isEmpty()) {
+        m_filesFromVerbatimEdit->setText(fileName);
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("选择 files-from-verbatim 文件: %1").arg(fileName));
+    }
+}
+
+void CreateTaskDialog::onBrowseFilesFromRaw()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("选择 NUL 分隔文件"),
+                                                    QString(),
+                                                    tr("所有文件 (*)"));
+    if (!fileName.isEmpty()) {
+        m_filesFromRawEdit->setText(fileName);
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("选择 files-from-raw 文件: %1").arg(fileName));
+    }
+}
+
+void CreateTaskDialog::setupBackupParams()
+{
+    m_backupParamsGroup = new QGroupBox(tr("▶ 高级选项-备份参数"), this);
+    m_backupParamsGroup->setCheckable(false);
+    m_backupParamsGroup->setStyleSheet(
+        "QGroupBox {"
+        "    font-size: 10pt;"
+        "    font-weight: bold;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 4px;"
+        "    margin-top: 10px;"
+        "    padding-top: 10px;"
+        "}"
+        "QGroupBox::title {"
+        "    subcontrol-origin: margin;"
+        "    subcontrol-position: top left;"
+        "    padding: 5px 10px;"
+        "    color: #4A90E2;"
+        "}"
+    );
+    m_backupParamsGroup->setCursor(Qt::PointingHandCursor);
+    m_backupParamsGroup->installEventFilter(this);
+
+    QVBoxLayout* paramsLayout = new QVBoxLayout(m_backupParamsGroup);
+    paramsLayout->setSpacing(5);
+    paramsLayout->setContentsMargins(15, 20, 15, 15);
+
+    // 创建滚动区域
+    QScrollArea* scrollArea = new QScrollArea(m_backupParamsGroup);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setMaximumHeight(200);
+    scrollArea->setStyleSheet("QScrollArea { background-color: transparent; border: none; }");
+
+    QWidget* contentWidget = new QWidget();
+    QVBoxLayout* contentLayout = new QVBoxLayout(contentWidget);
+    contentLayout->setSpacing(6);
+    contentLayout->setContentsMargins(5, 5, 5, 5);
+
+    QString inputStyle =
+        "QLineEdit {"
+        "    padding: 2px 6px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 2px;"
+        "    font-size: 8pt;"
+        "    min-height: 20px;"
+        "    max-height: 20px;"
+        "}";
+
+    // 1. 禁用进度扫描
+    m_noScanCheck = new QCheckBox(tr("禁用进度扫描 (--no-scan)"), contentWidget);
+    m_noScanCheck->setStyleSheet("QCheckBox { font-size: 8pt; color: #333333; }");
+    m_noScanCheck->setToolTip(tr("跳过扫描文件以估算进度，可减少网络文件系统的I/O开销"));
+    contentLayout->addWidget(m_noScanCheck);
+
+    // 2. 压缩级别
+    QLabel* compressionLabel = new QLabel(tr("压缩级别:"), contentWidget);
+    compressionLabel->setStyleSheet("QLabel { font-size: 8pt; font-weight: bold; color: #333333; }");
+    contentLayout->addWidget(compressionLabel);
+
+    m_compressionCombo = new QComboBox(contentWidget);
+    m_compressionCombo->addItem(tr("自动 (默认)"), "auto");
+    m_compressionCombo->addItem(tr("关闭"), "off");
+    m_compressionCombo->addItem(tr("最快"), "fastest");
+    m_compressionCombo->addItem(tr("更好"), "better");
+    m_compressionCombo->addItem(tr("最大"), "max");
+    m_compressionCombo->setCurrentIndex(0);
+    m_compressionCombo->setStyleSheet(
+        "QComboBox {"
+        "    padding: 2px 6px;"
+        "    border: 1px solid #D0D0D0;"
+        "    border-radius: 2px;"
+        "    font-size: 8pt;"
+        "    min-height: 20px;"
+        "    max-height: 20px;"
+        "}");
+    m_compressionCombo->setToolTip(tr("设置数据压缩级别（需要仓库格式版本2或更高）"));
+    contentLayout->addWidget(m_compressionCombo);
+
+    // 3. 禁用额外验证
+    m_noExtraVerifyCheck = new QCheckBox(tr("禁用额外验证 (--no-extra-verify)"), contentWidget);
+    m_noExtraVerifyCheck->setStyleSheet("QCheckBox { font-size: 8pt; color: #333333; }");
+    m_noExtraVerifyCheck->setToolTip(tr("禁用生成文件的验证以减少CPU使用，但建议定期运行 'restic check --read-data'"));
+    contentLayout->addWidget(m_noExtraVerifyCheck);
+
+    // 4. 文件读取并发数
+    QLabel* concurrencyLabel = new QLabel(tr("文件读取并发数:"), contentWidget);
+    concurrencyLabel->setStyleSheet("QLabel { font-size: 8pt; font-weight: bold; color: #333333; }");
+    contentLayout->addWidget(concurrencyLabel);
+
+    m_readConcurrencyEdit = new QLineEdit(contentWidget);
+    m_readConcurrencyEdit->setPlaceholderText(tr("留空使用默认值"));
+    m_readConcurrencyEdit->setStyleSheet(inputStyle);
+    m_readConcurrencyEdit->setToolTip(tr("从快速存储设备（如NVMe）备份时，增加此值可提高性能"));
+    contentLayout->addWidget(m_readConcurrencyEdit);
+
+    // 5. 包大小
+    QLabel* packSizeLabel = new QLabel(tr("包大小 (MiB):"), contentWidget);
+    packSizeLabel->setStyleSheet("QLabel { font-size: 8pt; font-weight: bold; color: #333333; }");
+    contentLayout->addWidget(packSizeLabel);
+
+    m_packSizeEdit = new QLineEdit(contentWidget);
+    m_packSizeEdit->setPlaceholderText(tr("留空使用默认值 (16 MiB)"));
+    m_packSizeEdit->setStyleSheet(inputStyle);
+    m_packSizeEdit->setToolTip(tr("对于大型仓库或快速上传，可增加包大小。注意会增加临时空间和内存使用"));
+    contentLayout->addWidget(m_packSizeEdit);
+
+    scrollArea->setWidget(contentWidget);
+    paramsLayout->addWidget(scrollArea);
+
+    scrollArea->setVisible(false);
+}
+
+void CreateTaskDialog::onBackupParamsToggled()
+{
+    m_backupParamsExpanded = !m_backupParamsExpanded;
+
+    QScrollArea* scrollArea = m_backupParamsGroup->findChild<QScrollArea*>();
+    if (scrollArea) {
+        scrollArea->setVisible(m_backupParamsExpanded);
+    }
+
+    m_backupParamsGroup->setTitle(m_backupParamsExpanded ? tr("▼ 高级选项-备份参数") : tr("▶ 高级选项-备份参数"));
+
+    if (m_backupParamsExpanded) {
+        setMaximumHeight(16777215);
+        int currentHeight = height();
+        resize(width(), currentHeight + 220);
+    } else {
+        int currentHeight = height();
+        resize(width(), currentHeight - 220);
     }
 }
 

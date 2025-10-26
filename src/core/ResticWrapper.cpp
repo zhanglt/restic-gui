@@ -241,6 +241,54 @@ bool ResticWrapper::backup(const Models::Repository& repo, const QString& passwo
             QString("排除包含此文件的目录: %1").arg(task.excludeIfPresent));
     }
 
+    // 添加包含文件选项
+    if (!task.filesFrom.isEmpty()) {
+        args << "--files-from" << task.filesFrom;
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("使用包含文件列表: %1").arg(task.filesFrom));
+    }
+
+    if (!task.filesFromVerbatim.isEmpty()) {
+        args << "--files-from-verbatim" << task.filesFromVerbatim;
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("使用逐字包含文件列表: %1").arg(task.filesFromVerbatim));
+    }
+
+    if (!task.filesFromRaw.isEmpty()) {
+        args << "--files-from-raw" << task.filesFromRaw;
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("使用 NUL 分隔包含文件列表: %1").arg(task.filesFromRaw));
+    }
+
+    // 添加备份参数
+    if (task.noScan) {
+        args << "--no-scan";
+        Utils::Logger::instance()->log(Utils::Logger::Debug, "禁用进度扫描");
+    }
+
+    if (!task.compression.isEmpty()) {
+        args << "--compression" << task.compression;
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("使用压缩级别: %1").arg(task.compression));
+    }
+
+    if (task.noExtraVerify) {
+        args << "--no-extra-verify";
+        Utils::Logger::instance()->log(Utils::Logger::Debug, "禁用额外验证");
+    }
+
+    if (task.readConcurrency > 0) {
+        args << "--read-concurrency" << QString::number(task.readConcurrency);
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("文件读取并发数: %1").arg(task.readConcurrency));
+    }
+
+    if (task.packSize > 0) {
+        args << "--pack-size" << QString::number(task.packSize);
+        Utils::Logger::instance()->log(Utils::Logger::Debug,
+            QString("包大小: %1 MiB").arg(task.packSize));
+    }
+
     // 添加标签
     for (const QString& tag : task.tags) {
         args << "--tag" << tag;

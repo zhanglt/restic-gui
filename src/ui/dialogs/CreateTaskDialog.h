@@ -34,13 +34,20 @@ protected:
 
 private slots:
     void onAdvancedOptionsToggled();
+    void onIncludeOptionsToggled();
+    void onBackupParamsToggled();
     void onAddExcludePattern();
     void onRemoveExcludePattern();
     void onEditExcludePattern();
     void onBrowseExcludeFile();
+    void onBrowseFilesFrom();
+    void onBrowseFilesFromVerbatim();
+    void onBrowseFilesFromRaw();
 
 private:
     void setupAdvancedOptions();
+    void setupIncludeOptions();
+    void setupBackupParams();
 
     Models::BackupTask m_task;
 
@@ -51,7 +58,7 @@ private:
     QLineEdit* m_tagsEdit;
     QComboBox* m_scheduleComboBox;
 
-    // 高级选项控件
+    // 高级排除选项控件
     QGroupBox* m_advancedGroup;
     bool m_advancedExpanded;
 
@@ -72,6 +79,27 @@ private:
     // 其他排除选项
     QCheckBox* m_excludeCachesCheck;
     QLineEdit* m_excludeIfPresentEdit;
+
+    // 高级包含选项控件
+    QGroupBox* m_includeGroup;
+    bool m_includeExpanded;
+
+    // 包含文件选项
+    QLineEdit* m_filesFromEdit;
+    QPushButton* m_browseFilesFromBtn;
+    QLineEdit* m_filesFromVerbatimEdit;
+    QPushButton* m_browseFilesFromVerbatimBtn;
+    QLineEdit* m_filesFromRawEdit;
+    QPushButton* m_browseFilesFromRawBtn;
+
+    // 高级备份参数控件
+    QGroupBox* m_backupParamsGroup;
+    bool m_backupParamsExpanded;
+    QCheckBox* m_noScanCheck;
+    QComboBox* m_compressionCombo;
+    QCheckBox* m_noExtraVerifyCheck;
+    QLineEdit* m_readConcurrencyEdit;
+    QLineEdit* m_packSizeEdit;
 };
 
 } // namespace UI
