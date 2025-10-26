@@ -2,6 +2,7 @@
 #include "ui_RepositoryPage.h"
 #include "../../core/RepositoryManager.h"
 #include "../../core/BackupManager.h"
+#include "../../core/SnapshotManager.h"
 #include "../../core/ResticWrapper.h"
 #include "../../data/PasswordManager.h"
 #include "../../data/CacheManager.h"
@@ -1199,10 +1200,50 @@ void RepositoryPage::onRepositorySelected(int currentRow, int previousRow)
     int snapshotCount = 0;
     qint64 totalSize = 0;
 
-    if (cacheMgr->getCachedSnapshots(repo.id, snapshots)) {
+    // 优先从缓存获取
+    bool hasCache = cacheMgr->getCachedSnapshots(repo.id, snapshots);
+
+    // 如果缓存为空，尝试从仓库获取（需要密码）
+    if (!hasCache || snapshots.isEmpty()) {
+        Data::PasswordManager* passMgr = Data::PasswordManager::instance();
+        if (passMgr->hasPassword(repo.id)) {
+            // 有密码，尝试获取快照列表
+            Core::SnapshotManager* snapMgr = Core::SnapshotManager::instance();
+            snapshots = snapMgr->listSnapshots(repo.id, false);
+        }
+    }
+
+    // 计算快照数和总大小
+    if (!snapshots.isEmpty()) {
         snapshotCount = snapshots.size();
         for (const auto& snap : snapshots) {
             totalSize += snap.size;
+        }
+
+        // 更新表格中的数据
+        int currentRowIndex = ui->tableWidget->currentRow();
+        if (currentRowIndex >= 0) {
+            // 更新快照数列
+            QTableWidgetItem* snapshotItem = ui->tableWidget->item(currentRowIndex, 4);
+            if (snapshotItem) {
+                snapshotItem->setText(QString::number(snapshotCount));
+            }
+
+            // 更新大小列
+            QString sizeTableText;
+            if (totalSize >= 1024LL * 1024 * 1024) {
+                sizeTableText = QString::number(totalSize / (1024.0 * 1024.0 * 1024.0), 'f', 1) + "GB";
+            } else if (totalSize >= 1024 * 1024) {
+                sizeTableText = QString::number(totalSize / (1024.0 * 1024.0), 'f', 1) + "MB";
+            } else if (totalSize > 0) {
+                sizeTableText = QString::number(totalSize / 1024.0, 'f', 1) + "KB";
+            } else {
+                sizeTableText = "-";
+            }
+            QTableWidgetItem* sizeItem = ui->tableWidget->item(currentRowIndex, 5);
+            if (sizeItem) {
+                sizeItem->setText(sizeTableText);
+            }
         }
     }
 
