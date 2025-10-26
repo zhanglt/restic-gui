@@ -57,8 +57,24 @@ bool DatabaseManager::initialize(const QString& dbPath)
         dbDir.mkpath(".");
     }
 
-    // 连接数据库
-    m_database = QSqlDatabase::addDatabase("QSQLITE");
+    // 如果数据库已打开且路径不同，先关闭旧连接
+    if (m_database.isOpen()) {
+        QString currentDbName = m_database.databaseName();
+        if (currentDbName != dbPath) {
+            Utils::Logger::instance()->log(Utils::Logger::Debug,
+                QString("关闭旧数据库连接: %1").arg(currentDbName));
+            m_database.close();
+        }
+    }
+
+    // 连接数据库（如果尚未添加连接，则添加；否则使用已有连接）
+    QString connectionName = QSqlDatabase::defaultConnection;
+    if (!QSqlDatabase::contains(connectionName)) {
+        m_database = QSqlDatabase::addDatabase("QSQLITE");
+    } else {
+        m_database = QSqlDatabase::database(connectionName);
+    }
+
     m_database.setDatabaseName(dbPath);
 
     if (!m_database.open()) {
@@ -275,8 +291,13 @@ int DatabaseManager::insertRepository(const Models::Repository& repo)
     query.bindValue(":config", QString::fromUtf8(configDoc.toJson(QJsonDocument::Compact)));
 
     query.bindValue(":password_hash", repo.passwordHash);
-    query.bindValue(":created_at", repo.createdAt.toString(Qt::ISODate));
-    query.bindValue(":last_backup", repo.lastBackup.toString(Qt::ISODate));
+
+    // 如果 createdAt 无效，使用当前时间
+    QDateTime createdAt = repo.createdAt.isValid() ? repo.createdAt : QDateTime::currentDateTime();
+    query.bindValue(":created_at", createdAt.toString(Qt::ISODate));
+
+    // lastBackup 可以为空字符串（数据库中允许 NULL）
+    query.bindValue(":last_backup", repo.lastBackup.isValid() ? repo.lastBackup.toString(Qt::ISODate) : QString());
     query.bindValue(":is_default", repo.isDefault ? 1 : 0);
 
     if (!query.exec()) {
@@ -1064,9 +1085,10 @@ bool DatabaseManager::setSetting(const QString& key, const QString& value)
     QMutexLocker locker(&m_mutex);
 
     QSqlQuery query(m_database);
-    query.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (:key, :value)");
+    query.prepare("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (:key, :value, :updated_at)");
     query.bindValue(":key", key);
     query.bindValue(":value", value);
+    query.bindValue(":updated_at", QDateTime::currentDateTime().toString(Qt::ISODate));
 
     if (!query.exec()) {
         m_lastError = query.lastError().text();
