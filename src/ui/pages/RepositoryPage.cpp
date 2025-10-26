@@ -8,6 +8,7 @@
 #include "../wizards/CreateRepoWizard.h"
 #include "../dialogs/ProgressDialog.h"
 #include "../dialogs/PruneOptionsDialog.h"
+#include "../dialogs/PasswordDialog.h"
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QHeaderView>
@@ -632,9 +633,8 @@ void RepositoryPage::onCheckRepository()
     QString password;
     if (!passMgr->getPassword(repo.id, password)) {
         bool ok;
-        password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             return;
@@ -734,9 +734,8 @@ void RepositoryPage::onRepairRepository()
     QString password;
     if (!passMgr->getPassword(repo.id, password)) {
         bool ok;
-        password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             return;
@@ -836,9 +835,8 @@ void RepositoryPage::onUnlockRepository()
     QString password;
     if (!passMgr->getPassword(repo.id, password)) {
         bool ok;
-        password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             return;
@@ -936,9 +934,8 @@ void RepositoryPage::onPruneRepository()
     QString password;
     if (!passMgr->getPassword(repo.id, password)) {
         bool ok;
-        password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             return;

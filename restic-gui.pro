@@ -92,7 +92,8 @@ SOURCES += \
     src/ui/dialogs/SettingsDialog.cpp \
     src/ui/dialogs/CreateTaskDialog.cpp \
     src/ui/dialogs/SnapshotBrowserDialog.cpp \
-    src/ui/dialogs/PruneOptionsDialog.cpp
+    src/ui/dialogs/PruneOptionsDialog.cpp \
+    src/ui/dialogs/PasswordDialog.cpp
 
 # UI - 自定义控件
 SOURCES += \
@@ -138,6 +139,7 @@ HEADERS += \
     src/ui/dialogs/CreateTaskDialog.h \
     src/ui/dialogs/SnapshotBrowserDialog.h \
     src/ui/dialogs/PruneOptionsDialog.h \
+    src/ui/dialogs/PasswordDialog.h \
     src/ui/widgets/SnapshotListWidget.h \
     src/ui/widgets/FileTreeWidget.h
 

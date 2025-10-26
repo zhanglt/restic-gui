@@ -5,6 +5,7 @@
 #include "../../data/PasswordManager.h"
 #include "../../utils/Logger.h"
 #include "../dialogs/SnapshotBrowserDialog.h"
+#include "../dialogs/PasswordDialog.h"
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QHeaderView>
@@ -315,9 +316,8 @@ void SnapshotPage::loadSnapshots()
         Models::Repository repo = repoMgr->getRepository(m_currentRepositoryId);
 
         bool ok;
-        QString password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        QString password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             return;
@@ -423,9 +423,8 @@ void SnapshotPage::onDeleteSnapshot()
         Models::Repository repo = repoMgr->getRepository(m_currentRepositoryId);
 
         bool ok;
-        QString password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        QString password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             return;
@@ -476,9 +475,8 @@ void SnapshotPage::onBrowseSnapshot()
         Models::Repository repo = repoMgr->getRepository(m_currentRepositoryId);
 
         bool ok;
-        QString password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        QString password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             return;

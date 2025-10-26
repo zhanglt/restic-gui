@@ -1,6 +1,7 @@
 #include "BackupPage.h"
 #include "ui_BackupPage.h"
 #include "../dialogs/CreateTaskDialog.h"
+#include "../dialogs/PasswordDialog.h"
 #include "../../data/DatabaseManager.h"
 #include "../../data/PasswordManager.h"
 #include "../../core/RepositoryManager.h"
@@ -563,12 +564,10 @@ void BackupPage::onRunTask()
     Data::PasswordManager* passMgr = Data::PasswordManager::instance();
     if (!passMgr->hasPassword(task.repositoryId)) {
         bool ok;
-        QString password = QInputDialog::getText(
+        QString password = PasswordDialog::getPassword(
             this,
             tr("输入仓库密码"),
             tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password,
-            QString(),
             &ok
         );
 

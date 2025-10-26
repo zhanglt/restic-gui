@@ -3,6 +3,7 @@
 #include "../../core/SnapshotManager.h"
 #include "../../data/PasswordManager.h"
 #include "../../utils/Logger.h"
+#include "../dialogs/PasswordDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -417,9 +418,8 @@ void SnapshotSelectionPage::loadSnapshots()
         Models::Repository repo = repoMgr->getRepository(m_currentRepositoryId);
 
         bool ok;
-        QString password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        QString password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             m_snapshotTable->setRowCount(0);

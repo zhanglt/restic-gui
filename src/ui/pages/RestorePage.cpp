@@ -7,6 +7,7 @@
 #include "../../utils/Logger.h"
 #include "../../models/RestoreOptions.h"
 #include "../dialogs/ProgressDialog.h"
+#include "../dialogs/PasswordDialog.h"
 #include "../wizards/RestoreWizard.h"
 #include <QInputDialog>
 #include <QMessageBox>
@@ -310,9 +311,8 @@ void RestorePage::loadSnapshots()
         Models::Repository repo = repoMgr->getRepository(m_currentRepositoryId);
 
         bool ok;
-        QString password = QInputDialog::getText(this, tr("输入密码"),
-            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name),
-            QLineEdit::Password, QString(), &ok);
+        QString password = PasswordDialog::getPassword(this, tr("输入密码"),
+            tr("请输入仓库 \"%1\" 的密码：").arg(repo.name), &ok);
 
         if (!ok || password.isEmpty()) {
             ui->snapshotTable->setRowCount(0);
