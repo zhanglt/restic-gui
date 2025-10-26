@@ -3,6 +3,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSignalSpy>
+#include <QCoreApplication>
 
 using namespace ResticGUI::Core;
 using namespace ResticGUI::Models;
@@ -15,6 +16,12 @@ void ResticWrapperTest::initTestCase()
     TestBase::initTestCase();
 
     m_wrapper = new ResticWrapper();
+
+    // 设置 restic 路径为项目 bin 目录
+    QString resticPath = QCoreApplication::applicationDirPath() + "/restic.exe";
+    qDebug() << "Setting restic path to:" << resticPath;
+    m_wrapper->setResticPath(resticPath);
+
     m_testRepoPath = tempDir() + "/test_restic_repo";
     m_testPassword = "TestPassword123!";
     m_resticAvailable = isResticAvailable();
@@ -22,6 +29,8 @@ void ResticWrapperTest::initTestCase()
     if (!m_resticAvailable) {
         qWarning() << "Restic is not available. Some tests will be skipped.";
         qWarning() << "To run all tests, please install restic: https://restic.net/";
+    } else {
+        qDebug() << "Restic is available at:" << resticPath;
     }
 }
 
@@ -37,12 +46,9 @@ void ResticWrapperTest::cleanupTestCase()
 
 bool ResticWrapperTest::isResticAvailable()
 {
-    // Try to run restic version
-    QProcess process;
-    process.start("restic", QStringList() << "version");
-    process.waitForFinished(5000);
-
-    return (process.exitCode() == 0);
+    // 使用 wrapper 来检查 restic 是否可用
+    QString version = m_wrapper->getVersion();
+    return !version.isEmpty();
 }
 
 Repository ResticWrapperTest::createTestRepository()
@@ -59,7 +65,7 @@ Repository ResticWrapperTest::createTestRepository()
 void ResticWrapperTest::testResticPathValidation()
 {
     // Test setting restic path
-    QString testPath = "/usr/bin/restic";
+    QString testPath = QCoreApplication::applicationDirPath() + "/restic.exe";
     m_wrapper->setResticPath(testPath);
 
     // Verify call doesn't crash

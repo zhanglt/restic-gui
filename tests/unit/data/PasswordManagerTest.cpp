@@ -1,5 +1,6 @@
 #include "PasswordManagerTest.h"
 #include <QSignalSpy>
+#include <QCoreApplication>
 
 using namespace ResticGUI::Data;
 
@@ -33,6 +34,7 @@ void PasswordManagerTest::init()
 {
     // 每个测试前的准备 - 清除缓存
     m_manager->clearCache();
+    QCoreApplication::processEvents(); // 处理定时器删除
     m_manager->setStorageMode(PasswordManager::NoStorage);
 }
 
@@ -40,6 +42,7 @@ void PasswordManagerTest::cleanup()
 {
     // 每个测试后的清理
     m_manager->clearCache();
+    QCoreApplication::processEvents(); // 处理定时器删除
 }
 
 // ========== 存储模式测试 ==========
@@ -117,12 +120,21 @@ void PasswordManagerTest::testEncryptedStorageMode()
     // 设置密码
     m_manager->setPassword(testRepoId, testPassword);
 
+    // 处理事件队列（定时器创建）
+    QCoreApplication::processEvents();
+
     // 清除缓存（模拟应用重启）
     m_manager->clearCache();
+
+    // 处理事件队列（定时器删除）
+    QCoreApplication::processEvents();
 
     // 获取密码（应该从数据库加载并解密）
     QString retrievedPassword;
     bool hasPassword = m_manager->getPassword(testRepoId, retrievedPassword);
+
+    // 处理事件队列（新定时器创建）
+    QCoreApplication::processEvents();
 
     // 验证密码已从数据库恢复
     QVERIFY(hasPassword);
@@ -202,6 +214,9 @@ void PasswordManagerTest::testClearCache()
     m_manager->setPassword(2, "Password2");
     m_manager->setPassword(3, "Password3");
 
+    // 处理定时器创建
+    QCoreApplication::processEvents();
+
     // 验证所有密码已缓存
     QVERIFY(m_manager->hasPassword(1));
     QVERIFY(m_manager->hasPassword(2));
@@ -209,6 +224,9 @@ void PasswordManagerTest::testClearCache()
 
     // 清除缓存
     m_manager->clearCache();
+
+    // 处理定时器删除
+    QCoreApplication::processEvents();
 
     // 验证所有密码已清除
     QVERIFY(!m_manager->hasPassword(1));
