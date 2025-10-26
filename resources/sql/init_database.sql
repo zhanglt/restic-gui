@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS schema_version (
 -- 仓库表
 CREATE TABLE IF NOT EXISTS repositories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
     type TEXT NOT NULL,
     path TEXT NOT NULL,
     config TEXT,
@@ -95,27 +95,21 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS password_store (
     repository_id INTEGER PRIMARY KEY,
     encrypted_password TEXT NOT NULL,
-    iv TEXT NOT NULL,
-    salt TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
     FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
 );
 
 -- 快照缓存表
 CREATE TABLE IF NOT EXISTS snapshots_cache (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     repository_id INTEGER NOT NULL,
-    snapshot_time TEXT NOT NULL,
+    snapshot_id TEXT NOT NULL,
+    time TEXT NOT NULL,
     hostname TEXT,
     username TEXT,
     paths TEXT NOT NULL,
     tags TEXT,
-    parent_id TEXT,
-    size INTEGER,
-    file_count INTEGER,
-    dir_count INTEGER,
-    cached_at TEXT NOT NULL,
+    parent TEXT,
     FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
 );
 
